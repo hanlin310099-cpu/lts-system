@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LTS 物流對點轉運系統 (線上雲端同步版)</title>
+    <title>LTS 物流對點轉運系統 (精細配載優化版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .nav-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: 900; background-color: #eff6ff; }
@@ -50,7 +50,7 @@
                 <div class="flex justify-between items-center border-b pb-3 mb-4 sticky top-0 bg-white">
                     <div>
                         <h3 id="load-title" class="font-black text-lg text-blue-700">車次配載</h3>
-                        <p class="text-[11px] text-slate-400">雲端即時鎖定分配，防止跨車重複載貨</p>
+                        <p class="text-[11px] text-slate-400">嚴格對點配額防呆系統 ＆ 路線智能置頂排序</p>
                     </div>
                     <button onclick="closeLoad()" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow-md">儲存並關閉</button>
                 </div>
@@ -173,8 +173,17 @@
             return { display: `${data.box||0}箱 ${data.rem||0}尾`, total };
         }
 
+        // 核心運算：計算某個對點商品已被所有車次瓜分掉的總箱數
+        function getGlobalAllocated(key) {
+            let total = 0;
+            for (let tName in db.loads) {
+                total += (db.loads[tName][key] || 0);
+            }
+            return total;
+        }
+
         function renderCheck() {
-            const vGrid = document.getElementById('check-vendor-grid');
+            vGrid = document.getElementById('check-vendor-grid');
             vGrid.innerHTML = db.vendors.map(v => `
                 <button onclick="selVendor('${v.name}')" class="p-2 rounded-xl border-2 text-[11px] font-black shadow-sm ${state.curV===v.name?'border-blue-600 bg-blue-50 text-blue-700':'bg-white border-transparent'}">
                     ${v.name}
@@ -252,16 +261,18 @@
             }).join('');
         }
 
-        // 🛠 終極防呆升級：直接拆解真實對點資料庫 (tally)，繞過所有廠商主檔硬性限制！
+        // 🛠 路線置頂與防超配核心演算法
         function openLoad(tn) {
             state.activeTruck = tn;
             const truck = db.trucks.find(x => x.name === tn) || { targets: [] };
+            const fixedTargets = truck.targets || []; // 該車次固定要去的單位
+            
             document.getElementById('load-selector').classList.remove('hidden');
             document.getElementById('load-title').innerText = `${tn} 配載`;
             
             if (!db.loads[tn]) db.loads[tn] = {};
 
-            // 1. 掃描目前所有存在對點數值的【單位】與【廠商與商品對應】
+            // 1. 抓取全台有貨的結構
             const tallyStructure = {}; 
             Object.keys(db.tally).forEach(key => {
                 const parts = key.split('_');
@@ -270,9 +281,7 @@
                     const uName = parts[1];
                     const pName = parts[2] || 'SUM';
                     
-                    const tInfo = db.tally[key];
                     const totalBox = getFinalBox(vName, uName, pName).total;
-
                     if (totalBox > 0) {
                         if (!tallyStructure[uName]) tallyStructure[uName] = {};
                         if (!tallyStructure[uName][vName]) tallyStructure[uName][vName] = [];
@@ -281,80 +290,101 @@
                 }
             });
 
-            // 2. 確保車次設定的目的地就算剛好沒貨，也會納入清單結構中
-            (truck.targets || []).forEach(tgt => {
+            // 確保勾選的固定路線就算剛好沒貨，也會被強迫加入清單結構以便置頂顯示
+            fixedTargets.forEach(tgt => {
                 if (!tallyStructure[tgt]) tallyStructure[tgt] = {};
+            });
+
+            // 2. 紫色圈圈優化：將所有目的地分組，固定路線絕對置頂，非固定路線沉底
+            const sortedUnits = Object.keys(tallyStructure).sort((a, b) => {
+                const aFixed = fixedTargets.includes(a) ? 1 : 0;
+                const bFixed = fixedTargets.includes(b) ? 1 : 0;
+                return bFixed - aFixed; // 1 排在 0 前面，實現置頂
             });
 
             let html = "";
             
-            // 3. 開始渲染每個目的地
-            Object.keys(tallyStructure).forEach(tgt => {
+            sortedUnits.forEach(tgt => {
                 const uObj = db.units.find(u => u.name === tgt);
                 const z = uObj?.zone || '北';
-                const isConfiguredTarget = (truck.targets || []).includes(tgt);
+                const isConfiguredTarget = fixedTargets.includes(tgt);
                 
-                let headerAddon = isConfiguredTarget ? '' : ' <span class="text-[9px] bg-red-500 text-white px-1 py-0.5 rounded ml-2">非固定車次路線</span>';
-                html += `<div class="bg-slate-100 p-2 rounded-lg font-black text-xs text-slate-700 mb-2 border-l-4 zone-${z}">${tgt} 目的地${headerAddon}</div>`;
+                // 產生頂部標籤與背景色
+                let headerAddon = isConfiguredTarget 
+                    ? ' <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md ml-2 font-black">⭐ 固定車次路線</span>' 
+                    : ' <span class="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-md ml-2 font-bold">非固定車次路線</span>';
+                
+                const headerBg = isConfiguredTarget ? 'bg-blue-50/70 border-blue-200' : 'bg-slate-100 border-slate-200';
+
+                html += `<div class="${headerBg} p-2.5 rounded-lg font-black text-xs text-slate-700 mb-2 border-l-4 zone-${z} flex items-center shadow-sm">${tgt} 目的地 ${headerAddon}</div>`;
 
                 const vendorsInUnit = tallyStructure[tgt];
                 if (Object.keys(vendorsInUnit).length === 0) {
-                    html += `<div class="text-[11px] text-slate-300 pl-4 py-2 mb-2 italic">該單位目前尚無對點貨物資料</div>`;
+                    html += `<div class="text-[11px] text-slate-300 pl-4 py-2 mb-3 italic">該固定單位目前尚無對點貨物資料</div>`;
                     return;
                 }
 
-                // 渲染該單位底下的所有對點廠商
                 Object.keys(vendorsInUnit).forEach(vName => {
                     const cargoItems = vendorsInUnit[vName];
                     let vendorId = `v_${tn}_${tgt}_${vName}`.replace(/\s+/g, '');
 
+                    // 紅色圈圈：檢查該廠商底下所有品項是否均已被本車「分滿剩餘額度」
                     const isVendorAllChecked = cargoItems.every(item => {
-                        return db.loads[tn][item.key] === item.maxBox;
+                        const globalAllocatedWithoutMe = getGlobalAllocated(item.key) - (db.loads[tn][item.key] || 0);
+                        const myMaxPossible = item.maxBox - globalAllocatedWithoutMe;
+                        return myMaxPossible > 0 && (db.loads[tn][item.key] || 0) === myMaxPossible;
                     });
 
                     html += `
                         <div class="border rounded-xl bg-white shadow-sm p-3 mb-3">
                             <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg mb-2">
                                 <label class="flex items-center font-black text-xs text-slate-800">
-                                    <input type="checkbox" class="w-4 h-4 mr-2 rounded" ${isVendorAllChecked?'checked':''} 
+                                    <input type="checkbox" class="w-4 h-4 mr-2 rounded text-blue-600" ${isVendorAllChecked?'checked':''} 
                                         onchange="toggleVendorGroupDirect('${tn}','${tgt}','${vName}', this.checked)">
                                     ${vName}
                                 </label>
                                 <button onclick="document.getElementById('${vendorId}').classList.toggle('hidden')" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold">展開/收合</button>
                             </div>
-                            <div id="${vendorId}" class="pl-2 space-y-2">`;
+                            <div id="${vendorId}" class="pl-1 space-y-2">`;
 
                     cargoItems.forEach(item => {
-                        let otherTruck = null;
-                        for (let otherT in db.loads) {
-                            if (otherT !== tn && (db.loads[otherT][item.key]||0) > 0) {
-                                otherTruck = otherT;
-                                break;
-                            }
-                        }
-
+                        // 算出除了我之外，其他車子總共分走了幾箱
+                        const globalAllocatedWithoutMe = getGlobalAllocated(item.key) - (db.loads[tn][item.key] || 0);
+                        // 本車極限還能分幾箱
+                        const myMaxPossible = Math.max(0, item.maxBox - globalAllocatedWithoutMe);
+                        
                         let currentAllocated = db.loads[tn][item.key] !== undefined ? db.loads[tn][item.key] : 0;
-                        const isChecked = currentAllocated > 0;
+                        
+                        // 如果別車已經把對點數全部載光了
+                        const isSoldOutByOthers = myMaxPossible <= 0 && currentAllocated === 0;
 
                         html += `
-                            <div class="flex items-center justify-between py-2 border-b last:border-0 text-xs ${otherTruck?'opacity-40':''}">
-                                <label class="flex items-center flex-1 font-medium">
-                                    <input type="checkbox" class="w-4 h-4 mr-2" ${isChecked?'checked':''} ${otherTruck?'disabled':''} 
-                                        onchange="toggleItemSingle('${tn}','${item.key}', ${item.maxBox}, this.checked)">
-                                    <div>
-                                        <span class="font-bold">${item.pName==='SUM'?'總箱點收':item.pName}</span>
-                                        <span class="text-[10px] text-slate-400 block">總: ${item.maxBox}箱</span>
+                            <div class="flex items-center justify-between py-2 border-b last:border-0 text-xs ${isSoldOutByOthers?'opacity-30':''}">
+                                <label class="flex items-center flex-1 font-medium pr-2">
+                                    <input type="checkbox" class="w-4 h-4 mr-2 text-blue-600" 
+                                        ${currentAllocated > 0 ? 'checked' : ''} 
+                                        ${isSoldOutByOthers ? 'disabled' : ''} 
+                                        onchange="toggleItemSingle('${tn}','${item.key}', ${myMaxPossible}, this.checked)">
+                                    <div class="truncate">
+                                        <span class="font-black text-slate-800 text-xs block truncate">${item.pName==='SUM'?'總箱點收':item.pName}</span>
+                                        <span class="text-[10px] text-slate-500">
+                                            對點數: <strong class="text-slate-700">${item.maxBox}</strong> 箱 
+                                            ${globalAllocatedWithoutMe > 0 ? `| 他車已分: <span class="text-orange-600">${globalAllocatedWithoutMe}</span> 箱` : ''}
+                                        </span>
                                     </div>
                                 </label>
-                                <div class="flex items-center gap-1">
-                                    ${otherTruck ? `
-                                        <span class="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">${otherTruck}</span>
-                                    ` : `
-                                        <input type="number" min="0" max="${item.maxBox}" class="w-12 border rounded text-center p-1 font-black text-blue-600" 
-                                            value="${currentAllocated}" 
-                                            onchange="updateAllocatedBoxes('${tn}','${item.key}',${item.maxBox}, this.value)">
-                                        <span class="text-[10px] text-slate-400">箱</span>
-                                    `}
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <div class="flex flex-col items-end">
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" min="0" max="${item.maxBox}" 
+                                                class="w-14 border rounded-lg text-center p-1.5 font-black text-blue-600 text-sm focus:ring-2 focus:ring-blue-400" 
+                                                value="${currentAllocated}" 
+                                                ${isSoldOutByOthers ? 'disabled' : ''}
+                                                oninput="updateAllocatedBoxes('${tn}','${item.key}',${item.maxBox},${globalAllocatedWithoutMe}, this.value, 'hint_${item.key}')">
+                                            <span class="text-[11px] font-bold text-slate-400">箱</span>
+                                        </div>
+                                        <span id="hint_${item.key}" class="text-[9px] text-red-500 font-bold hidden">⚠️ 超過對點總數</span>
+                                    </div>
                                 </div>
                             </div>`;
                     });
@@ -366,28 +396,45 @@
             document.getElementById('load-list').innerHTML = html || "<div class='py-20 text-center text-slate-300'>此車次與全台對點暫無任何貨物數據</div>";
         }
 
-        // 專為直接資料流設計的批次勾選
+        // 紅色圈圈：一鍵勾選時，同樣嚴格遵守剩餘配額，絕不超載
         function toggleVendorGroupDirect(tn, tgt, vName, isChecked) {
             Object.keys(db.tally).forEach(key => {
                 if (key.startsWith(`${vName}_${tgt}_`)) {
                     const maxBox = getFinalBox(vName, tgt, key.split('_')[2]||'SUM').total;
-                    let isLocked = false;
-                    for (let otherT in db.loads) { if (otherT !== tn && (db.loads[otherT][key]||0) > 0) isLocked = true; }
-                    if (!isLocked && maxBox > 0) db.loads[tn][key] = isChecked ? maxBox : 0;
+                    const globalAllocatedWithoutMe = getGlobalAllocated(key) - (db.loads[tn][key] || 0);
+                    const myMaxPossible = Math.max(0, maxBox - globalAllocatedWithoutMe);
+                    
+                    if (maxBox > 0) {
+                        db.loads[tn][key] = isChecked ? myMaxPossible : 0;
+                    }
                 }
             });
             dbRef.set(db);
         }
 
-        function toggleItemSingle(tn, key, maxBox, isChecked) {
-            db.loads[tn][key] = isChecked ? maxBox : 0;
+        function toggleItemSingle(tn, key, myMaxPossible, isChecked) {
+            db.loads[tn][key] = isChecked ? myMaxPossible : 0;
             dbRef.set(db);
         }
 
-        function updateAllocatedBoxes(tn, key, maxBox, value) {
+        // 紅色圈圈防呆：即時攔截並強制重設超過對點數的非法值
+        function updateAllocatedBoxes(tn, key, maxBox, otherAllocated, value, hintId) {
             let val = parseInt(value) || 0;
-            if (val > maxBox) val = maxBox;
+            const hintSpan = document.getElementById(hintId);
+            const absoluteMaxAllowed = maxBox - otherAllocated; // 全台對點扣掉別車後，剩下的極限
+
             if (val < 0) val = 0;
+            
+            if (val > absoluteMaxAllowed) {
+                val = absoluteMaxAllowed; // 鎖死上限！
+                if(hintSpan) {
+                    hintSpan.classList.remove('hidden'); // 亮起紅色警告
+                    setTimeout(() => hintSpan.classList.add('hidden'), 2000); // 兩秒後自滅
+                }
+            } else {
+                if(hintSpan) hintSpan.classList.add('hidden');
+            }
+            
             db.loads[tn][key] = val;
             dbRef.set(db);
         }
@@ -438,7 +485,6 @@
                 const filteredUnits = state.repU === 'all' ? db.units : db.units.filter(u => u.name === state.repU);
                 
                 filteredUnits.forEach(u => {
-                    // 覆點報表相容性防呆：直接動態讀取，避免名稱死板卡死
                     Object.keys(db.tally).forEach(key => {
                         if (key.startsWith(`${vendor.name}_${u.name}_`)) {
                             const pName = key.split('_')[2] || 'SUM';
