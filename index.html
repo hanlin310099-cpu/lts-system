@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LTS 物流對點轉運系統 (切頁實時免刷更新版)</title>
+    <title>LTS 物流對點轉運系統 (實時免刷動態無閃版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .nav-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: 900; background-color: #eff6ff; }
@@ -117,14 +117,9 @@
         firebase.initializeApp({ databaseURL: FIREBASE_DB_URL });
         const dbRef = firebase.database().ref("LTS_SYSTEM_DATA");
 
+        // 初始本地變數預設值（防止首次下載慢）
         let db = {
-            trucks: [{name:'北區車01', limit:500, targets:['八堵','五股']}],
-            vendors: [{name:'鮮食廠', mode:'detail', items:[{name:'便當', pcs:12},{name:'三明治', pcs:10}]}],
-            units: [{name:'八堵', zone:'北', type:'A'},{name:'五股', zone:'北', type:'A'},{name:'嘉義', zone:'南', type:'B'}],
-            tally: {},    
-            loads: {},    
-            tracks: {},
-            okStatus: {}
+            trucks: [], vendors: [], units: [], tally: {}, loads: {}, tracks: {}, okStatus: {}
         };
 
         const state = { tab: 'check', curV: null, curU: 'all', repMode: 'item', repV: null, repU: 'all', calc: null, activeTruck: null };
@@ -142,20 +137,28 @@
             });
         };
 
-        // 🛠 核心監聽：雲端一改，即時重繪當前畫面
+        // 🛠 核心監聽：採用資料預處理緩衝流，解決一秒閃爍問題
         dbRef.on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData) {
-                db = cloudData;
-                if(!db.tally) db.tally = {};
-                if(!db.loads) db.loads = {};
-                if(!db.tracks) db.tracks = {};
-                if(!db.okStatus) db.okStatus = {};
-                for (let t in db.loads) { if (Array.isArray(db.loads[t])) { db.loads[t] = {}; } }
+                // 1. 在記憶體中完整清洗與建構結構，不影響當前 DOM 渲染
+                let tempDb = cloudData;
+                if(!tempDb.trucks) tempDb.trucks = [];
+                if(!tempDb.vendors) tempDb.vendors = [];
+                if(!tempDb.units) tempDb.units = [];
+                if(!tempDb.tally) tempDb.tally = {};
+                if(!tempDb.loads) tempDb.loads = {};
+                if(!tempDb.tracks) tempDb.tracks = {};
+                if(!tempDb.okStatus) tempDb.okStatus = {};
+                for (let t in tempDb.loads) { if (Array.isArray(tempDb.loads[t])) { tempDb.loads[t] = {}; } }
+                
+                // 2. 清洗完成後一次遞交，保證資料連貫
+                db = tempDb;
+
                 document.getElementById('sync-status').innerText = "● 雲端已同步 (實時連線)";
                 document.getElementById('sync-status').className = "bg-green-600 text-white text-[11px] text-center py-1 font-bold";
                 
-                // 💡 優化：如果此時配載彈窗開著，同步重繪彈窗內容；否則重繪主分頁
+                // 3. 根據當前鎖定的操作介面進行局部更新，絕不閃爍或彈回預設分頁
                 if(state.activeTruck && !document.getElementById('load-selector').classList.contains('hidden')){
                     openLoad(state.activeTruck);
                 } else {
@@ -209,6 +212,9 @@
 
             if (state.curV) {
                 const vendor = db.vendors.find(v => v.name === state.curV);
+                // 緩衝防呆：如果中途有人把廠商刪了
+                if(!vendor) { state.curV = null; document.getElementById('check-workspace').classList.add('hidden'); return; }
+                
                 document.getElementById('check-workspace').classList.remove('hidden');
                 document.getElementById('check-header').innerText = `正在點收：${state.curV}`;
                 
@@ -249,6 +255,9 @@
                             </div>`}
                     </div>
                 `).join('');
+            } else {
+                document.getElementById('check-workspace').classList.add('hidden');
+                document.getElementById('check-header').innerText = `請先點選廠商卡片`;
             }
         }
 
@@ -663,19 +672,13 @@
 
         function closeCalc() { document.getElementById('calc-pop').classList.replace('flex', 'hidden'); }
 
-        // 🛠 核心修改：切換分頁時，強制觸發即時重新渲染
         function switchTab(t) { 
             state.tab = t; 
-            // 隱藏所有區塊
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden-tab')); 
-            // 秀出目標區塊
             document.getElementById('tab-' + t).classList.remove('hidden-tab'); 
-            // 清除導覽列舊樣式
             document.querySelectorAll('nav button').forEach(b => b.className = "flex-1 h-full text-sm font-bold text-slate-400 transition-colors"); 
-            // 亮起當前分頁按鈕
             document.getElementById('nav-' + t).className = "flex-1 h-full nav-active"; 
             
-            // 🔥 終結手動下刷：切換的當下，立刻用 Firebase 最新變數重繪畫面
             refreshUI(); 
         }
 
@@ -701,6 +704,7 @@
         function calcU(vn, un) { const v = db.vendors.find(x=>x.name===vn); if(!v)return 0; const items = v.mode==='detail' ? v.items : [{name:'SUM'}]; return items.reduce((acc,p)=>acc+getFinalBox(vn, un, p.name).total, 0); }
         function dailyReset() { if(confirm('【線上日結保險】這將清除所有連線設備今日的對點、配載數據！維護主資料將保留。確定執行？')) { db.tally={}; db.loads={}; db.tracks={}; db.okStatus={}; save(); } }
 
+        // 啟動預設停留在現場對點
         switchTab('check');
     </script>
 </body>
