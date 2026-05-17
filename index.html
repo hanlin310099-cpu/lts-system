@@ -7,12 +7,32 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .nav-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: 900; background-color: #eff6ff; }
-        .hidden-tab { display: none; }
+        /* 移除隱藏標籤樣式，改用滑動容器機制 */
         .compact-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
         .calc-btn { @apply h-14 text-xl font-bold rounded-xl bg-gray-100 active:bg-gray-300 flex items-center justify-center shadow-sm; }
         .zone-北 { border-left: 6px solid #3b82f6; } .zone-中 { border-left: 6px solid #10b981; } .zone-南 { border-left: 6px solid #f59e0b; }
         .unit-tag { @apply text-[10px] px-2 py-0.5 rounded-md font-bold; }
         .bg-unit-北 { background: #dbeafe; color: #1e40af; } .bg-unit-中 { background: #d1fae5; color: #065f46; } .bg-unit-南 { background: #ffedd5; color: #9a3412; }
+        
+        /* 💡 專業優化：高效能原生滑動與精密物理鎖定樣式 */
+        .swipe-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        .swipe-container::-webkit-scrollbar {
+            display: none; /* 隱藏下方滾動條，確保介面純淨 */
+        }
+        .swipe-panel {
+            width: 100%;
+            flex-shrink: 0;
+            scroll-snap-align: center;
+            scroll-snap-stop: always; /* 💡 核心：強迫每次手勢滑動僅能移動一格，防止一次滑到底 */
+            overflow-y: auto; /* 允許各別頁面上下捲動 */
+            max-height: calc(100vh - 8rem); /* 限制面板高度以符合視窗 */
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-slate-900 select-none overflow-x-hidden">
@@ -147,9 +167,12 @@
 
         firebase.initializeApp({ databaseURL: FIREBASE_DB_URL });
         const dbRef = firebase.database().ref("LTS_SYSTEM_DATA");
-
         let db = { trucks: [], vendors: [], units: [], tally: {}, loads: {}, tracks: {}, okStatus: {} };
         const state = { tab: 'check', curV: null, curU: 'all', loadU: 'all', repMode: 'item', repV: null, repU: 'all', calc: null, activeTruck: null };
+        
+        // 用於防止點擊導覽列滾動與滑動監聽產生衝突的旗標
+        let isProgrammaticScroll = false;
+        const tabOrder = ['check', 'loading', 'report', 'manage'];
 
         const save = () => {
             document.getElementById('sync-status').innerText = "雲端同步中...";
@@ -634,15 +657,57 @@
 
         function closeCalc() { document.getElementById('calc-pop').classList.replace('flex', 'hidden'); }
 
-        function switchTab(t) { 
-            state.tab = t; document.querySelectorAll('section').forEach(s => s.classList.add('hidden-tab')); document.getElementById('tab-' + t).classList.remove('hidden-tab'); 
-            document.querySelectorAll('nav button').forEach(b => b.className = "flex-1 h-full text-sm font-bold text-slate-400 transition-colors"); document.getElementById('nav-' + t).className = "flex-1 h-full nav-active"; 
-            refreshUI(); 
+        // 💡 核心優化：switchTab 按鈕切換改為驅動橫向滾動，並強制分頁置頂
+        function switchTab(tabName) {
+            state.tab = tabName;
+            updateNavStyles(tabName);
+            
+            const targetSection = document.getElementById('tab-' + tabName);
+            if (targetSection) {
+                isProgrammaticScroll = true;
+                // 分頁更換後，立刻將內容回捲到最頂端，維持介面整潔乾淨
+                targetSection.scrollTop = 0;
+                
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                // 滾動結束後解除鎖定旗標
+                setTimeout(() => { isProgrammaticScroll = false; }, 400);
+            }
+            refreshUI();
         }
 
         function refreshUI() { if(state.tab==='check')renderCheck(); if(state.tab==='loading')renderLoading(); if(state.tab==='report')renderReport(); if(state.tab==='manage')renderManage(); }
         function dbAdd(t) { const o = { trucks:{name:'新車次',limit:500,targets:[]}, vendors:{name:'新廠商',mode:'detail',items:[]}, units:{name:'新單位',zone:'北',type:'A'} }; db[t].push(o[t]); save(); }
         function dbE(t,i,k,v) { db[t][i][k]=v; save(); }
+
+        // 💡 新增：全自動 IntersectionObserver 滑動捕捉機制 (每次移動一個介面，並在更換介面時先回頂端)
+        window.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('main-swipe-container');
+            const sections = tabOrder.map(t => document.getElementById('tab-' + t));
+            
+            const observerOptions = {
+                root: container,
+                threshold: 0.5 // 當滑動露出面積超過 50%，立即判定進入該分頁面板
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                if (isProgrammaticScroll) return; // 點擊導覽按鈕引起的滾動直接略過，不互相干擾
+                
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const activeTabName = entry.target.id.replace('tab-', '');
+                        state.tab = activeTabName;
+                        
+                        // 💡 滿足需求：切換新介面時，先將其滾動回到最頂端
+                        entry.target.scrollTop = 0;
+                        
+                        updateNavStyles(activeTabName);
+                        refreshUI();
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => { if(section) observer.observe(section); });
+        });
         
         // 💡 串接自訂防呆機制
         function askDelete(type, index, name) {
