@@ -7,14 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .nav-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: 900; background-color: #eff6ff; }
-        /* 移除隱藏標籤樣式，改用滑動容器機制 */
         .compact-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
         .calc-btn { @apply h-14 text-xl font-bold rounded-xl bg-gray-100 active:bg-gray-300 flex items-center justify-center shadow-sm; }
         .zone-北 { border-left: 6px solid #3b82f6; } .zone-中 { border-left: 6px solid #10b981; } .zone-南 { border-left: 6px solid #f59e0b; }
         .unit-tag { @apply text-[10px] px-2 py-0.5 rounded-md font-bold; }
         .bg-unit-北 { background: #dbeafe; color: #1e40af; } .bg-unit-中 { background: #d1fae5; color: #065f46; } .bg-unit-南 { background: #ffedd5; color: #9a3412; }
-        
-        /* 💡 專業優化：高效能原生滑動與精密物理鎖定樣式 */
+
+        /* 💡 核心滑動專用樣式 */
         .swipe-container {
             display: flex;
             overflow-x: auto;
@@ -23,15 +22,14 @@
             -webkit-overflow-scrolling: touch;
         }
         .swipe-container::-webkit-scrollbar {
-            display: none; /* 隱藏下方滾動條，確保介面純淨 */
+            display: none; /* 隱藏滑動滾動條 */
         }
-        .swipe-panel {
+        .swipe-page {
             width: 100%;
             flex-shrink: 0;
-            scroll-snap-align: center;
-            scroll-snap-stop: always; /* 💡 核心：強迫每次手勢滑動僅能移動一格，防止一次滑到底 */
-            overflow-y: auto; /* 允許各別頁面上下捲動 */
-            max-height: calc(100vh - 8rem); /* 限制面板高度以符合視窗 */
+            scroll-snap-align: start;
+            scroll-snap-stop: always; /* 💡 限制每次滑動只能滑一頁，避免滑過頭 */
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -51,9 +49,9 @@
         </nav>
     </div>
 
-    <main id="main-swipe-container" class="swipe-container p-3 max-w-5xl mx-auto pb-24 mt-2">
+    <main id="main-swipe-container" class="swipe-container w-full max-w-5xl mx-auto mt-2">
         
-        <section id="tab-check" class="swipe-panel space-y-3">
+        <section id="tab-check" class="swipe-page p-3 space-y-3">
             <div class="flex justify-between items-center bg-white p-2 rounded-xl shadow-sm border">
                 <button onclick="askDailyReset()" class="bg-red-500 text-white px-3 py-2 rounded-lg font-bold text-xs active:scale-95">日結清空</button>
                 <div id="check-header" class="text-blue-600 font-black text-sm truncate">請先點選廠商卡片</div>
@@ -65,7 +63,7 @@
             </div>
         </section>
 
-        <section id="tab-loading" class="swipe-panel space-y-4">
+        <section id="tab-loading" class="swipe-page p-3 space-y-4">
             <div class="flex gap-2 overflow-x-auto pb-1 bg-white p-2 rounded-xl border shadow-sm" id="loading-unit-tabs"></div>
             <div id="truck-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
             <div id="load-selector" class="hidden fixed inset-0 bg-white z-[60] overflow-y-auto p-4">
@@ -80,7 +78,7 @@
             </div>
         </section>
 
-        <section id="tab-report" class="swipe-panel space-y-4">
+        <section id="tab-report" class="swipe-page p-3 space-y-4">
             <div class="flex bg-slate-200 p-1 rounded-xl">
                 <button onclick="toggleRepMode('item')" id="btn-rep-item" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow text-blue-600">商品報表</button>
                 <button onclick="toggleRepMode('defer')" id="btn-rep-defer" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500">區域遞延單</button>
@@ -90,7 +88,7 @@
             <div id="report-content" class="space-y-4"></div>
         </section>
 
-        <section id="tab-manage" class="swipe-panel space-y-6">
+        <section id="tab-manage" class="swipe-page p-3 space-y-6">
             <div class="bg-white p-4 rounded-xl shadow-sm border">
                 <h2 class="font-black border-l-4 border-blue-600 pl-2 mb-4">車次設定</h2>
                 <div id="m-trucks" class="space-y-3"></div>
@@ -143,13 +141,17 @@
                 <button class="calc-btn" onclick="cInput('8')">8</button>
                 <button class="calc-btn" onclick="cInput('9')">9</button>
                 <button class="calc-btn bg-orange-100 text-orange-600" onclick="cOp('+')">+</button>
+                
                 <button class="calc-btn" onclick="cInput('4')">4</button>
                 <button class="calc-btn" onclick="cInput('5')">5</button>
                 <button class="calc-btn" onclick="cInput('6')">6</button>
                 <button class="calc-btn bg-orange-100 text-orange-600 font-black text-2xl" onclick="cOp('-')">-</button>
-                <button class="calc-btn" onclick="cInput('1')">1</button> <button class="calc-btn" onclick="cInput('2')">2</button>
+                
+                <button class="calc-btn" onclick="cInput('1')">1</button>
+                <button class="calc-btn" onclick="cInput('2')">2</button>
                 <button class="calc-btn" onclick="cInput('3')">3</button>
                 <button class="calc-btn bg-blue-600 text-white row-span-2 text-2xl" onclick="cOk()">＝</button>
+                
                 <button class="calc-btn col-span-2" onclick="cInput('0')">0</button>
                 <button class="calc-btn bg-red-500 text-white font-black" onclick="cClear()">C</button>
             </div>
@@ -167,9 +169,9 @@
         let db = { trucks: [], vendors: [], units: [], tally: {}, loads: {}, tracks: {}, okStatus: {} };
         const state = { tab: 'check', curV: null, curU: 'all', loadU: 'all', repMode: 'item', repV: null, repU: 'all', calc: null, activeTruck: null };
         
-        // 用於防止點擊導覽列滾動與滑動監聽產生衝突的旗標
-        let isProgrammaticScroll = false;
+        // 💡 滑動控制專用輔助狀態變數
         const tabOrder = ['check', 'loading', 'report', 'manage'];
+        let isProgrammaticScroll = false;
 
         const save = () => {
             document.getElementById('sync-status').innerText = "雲端同步中...";
@@ -195,6 +197,7 @@
                 if(!tempDb.loads) tempDb.loads = {};
                 if(!tempDb.tracks) tempDb.tracks = {};
                 if(!tempDb.okStatus) tempDb.okStatus = {};
+               
                 for (let t in tempDb.loads) { if (Array.isArray(tempDb.loads[t])) { tempDb.loads[t] = {}; } }
                 db = tempDb;
                 document.getElementById('sync-status').innerText = "● 雲端已同步 (實時連線)";
@@ -209,6 +212,93 @@
             }
         });
 
+        // 💡 修改 switchTab 點擊行為：改為平滑滾動至目標 Section，並在切換時將頁面強配置頂
+        function switchTab(tabName) {
+            state.tab = tabName;
+            const container = document.getElementById('main-swipe-container');
+            const targetSection = document.getElementById('tab-' + tabName);
+            
+            if (container && targetSection) {
+                isProgrammaticScroll = true; // 鎖定標記，避免與滑動監聽衝突
+                
+                // 需求：切換介面後先到該介面的最頂端
+                window.scrollTo({ top: 0 });
+                targetSection.scrollTop = 0; 
+
+                // 精準滑動到指定區塊
+                container.scrollTo({
+                    left: targetSection.offsetLeft,
+                    behavior: 'smooth'
+                });
+
+                updateNavStyles(tabName);
+                
+                // 滾動動畫結束後解鎖
+                setTimeout(() => {
+                    isProgrammaticScroll = false;
+                }, 350);
+            }
+        }
+
+        // 💡 抽出導航列 CSS 更新邏輯，供滑動與點擊共用
+        function updateNavStyles(activeTab) {
+            tabOrder.forEach(t => {
+                const btn = document.getElementById('nav-' + t);
+                if (btn) {
+                    if (t === activeTab) {
+                        btn.className = "flex-1 h-full text-sm font-bold transition-colors nav-active";
+                    } else {
+                        btn.className = "flex-1 h-full text-sm font-bold text-slate-600 transition-colors";
+                    }
+                }
+            });
+        }
+
+        // 💡 全域 UI 刷新主控制
+        function refreshUI() {
+            if (state.tab === 'check') renderCheck();
+            if (state.tab === 'loading') renderLoading();
+            if (state.tab === 'report') renderReport();
+            if (state.tab === 'manage') renderManage();
+        }
+
+        // 💡 綁定 IntersectionObserver 實時自動追蹤人員手勢滑動
+        window.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('main-swipe-container');
+            const sections = tabOrder.map(t => document.getElementById('tab-' + t));
+            
+            const observerOptions = {
+                root: container,
+                threshold: 0.5 // 當畫面倒入超過 50%，立即判定人員滑至該介面
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                if (isProgrammaticScroll) return; // 點擊導航引起的滾動不觸發此追蹤
+                
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const activeTabName = entry.target.id.replace('tab-', '');
+                        state.tab = activeTabName;
+                        
+                        // 需求：切換介面後先到該介面的最頂端
+                        window.scrollTo({ top: 0 });
+                        entry.target.scrollTop = 0;
+                        
+                        updateNavStyles(activeTabName);
+                        refreshUI();
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(sec => {
+                if(sec) observer.observe(sec);
+            });
+            
+            // 初始化第一次導航狀態
+            updateNavStyles(state.tab);
+        });
+
+        // 💡 內建自訂防呆確認視窗邏輯
         function showCustomConfirm({ title, msg, isDanger, onConfirm }) {
             const modal = document.getElementById('custom-confirm-modal');
             const box = document.getElementById('confirm-box');
@@ -359,445 +449,4 @@
                             </div>
                             <div class="text-right shrink-0"><span class="text-xs font-black ${currentLoad>t.limit?'text-red-500':'text-blue-600'}">${currentLoad} / ${t.limit} 箱</span></div>
                         </div>
-                        <div class="w-full bg-slate-100 h-1.5 rounded-full mb-3 mt-2"><div class="bg-blue-600 h-full rounded-full" style="width:${Math.min(currentLoad/t.limit*100,100)}%"></div></div>
-                        <div class="space-y-1">${summaryHtml || '<div class="text-[10px] text-slate-300 text-center py-2">待載入貨物...</div>'}</div>
-                    </div>`;
-            }).join('');
-        }
-
-        function openLoad(tn) {
-            state.activeTruck = tn;
-            const truck = db.trucks.find(x => x.name === tn) || { targets: [] };
-            const fixedTargets = truck.targets || [];
-            document.getElementById('load-selector').classList.remove('hidden');
-            document.getElementById('load-title').innerText = `${tn} 配載`;
-            if (!db.loads[tn]) db.loads[tn] = {};
-
-            const tallyStructure = {};
-            Object.keys(db.tally).forEach(key => {
-                const parts = key.split('_');
-                if (parts.length >= 2) {
-                    const vName = parts[0]; const uName = parts[1]; const pName = parts[2] || 'SUM';
-                    const totalBox = getFinalBox(vName, uName, pName).total;
-                    if (totalBox > 0) {
-                        if (!tallyStructure[uName]) tallyStructure[uName] = {};
-                        if (!tallyStructure[uName][vName]) tallyStructure[uName][vName] = [];
-                        tallyStructure[uName][vName].push({ pName, maxBox: totalBox, key });
-                    }
-                }
-            });
-            fixedTargets.forEach(tgt => { if (!tallyStructure[tgt]) tallyStructure[tgt] = {}; });
-            const sortedUnits = Object.keys(tallyStructure).sort((a, b) => {
-                const aFixed = fixedTargets.includes(a) ? 1 : 0;
-                const bFixed = fixedTargets.includes(b) ? 1 : 0;
-                return bFixed - aFixed;
-            });
-            let html = "";
-            sortedUnits.forEach(tgt => {
-                const uObj = db.units.find(u => u.name === tgt); const z = uObj?.zone || '北';
-                const isConfiguredTarget = fixedTargets.includes(tgt);
-                let headerAddon = isConfiguredTarget ? ' <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md ml-2 font-black">⭐ 固定車次路線</span>' : ' <span class="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-md ml-2 font-bold">非固定車次路線</span>';
-                const headerBg = isConfiguredTarget ? 'bg-blue-50/70 border-blue-200' : 'bg-slate-100 border-slate-200';
-
-                html += `<div class="${headerBg} p-2.5 rounded-lg font-black text-xs text-slate-700 mb-2 border-l-4 zone-${z} flex items-center shadow-sm">${tgt} 目的地 ${headerAddon}</div>`;
-                const vendorsInUnit = tallyStructure[tgt];
-                if (Object.keys(vendorsInUnit).length === 0) {
-                    html += `<div class="text-[11px] text-slate-300 pl-4 py-2 mb-3 italic">該固定單位目前尚無對點貨物資料</div>`;
-                    return;
-                }
-
-                Object.keys(vendorsInUnit).forEach(vName => {
-                    const cargoItems = vendorsInUnit[vName];
-                    let vendorId = `v_${tn}_${tgt}_${vName}`.replace(/\s+/g, '');
-                    const isVendorAllChecked = cargoItems.every(item => {
-                        const globalAllocatedWithoutMe = getGlobalAllocated(item.key) - (db.loads[tn][item.key] || 0);
-                        const myMaxPossible = item.maxBox - globalAllocatedWithoutMe;
-                        return myMaxPossible > 0 && (db.loads[tn][item.key] || 0) === myMaxPossible;
-                    });
-
-                    html += `
-                        <div class="border rounded-xl bg-white shadow-sm p-3 mb-3">
-                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg mb-2">
-                                <label class="flex items-center font-black text-xs text-slate-800">
-                                    <input type="checkbox" class="w-4 h-4 mr-2 rounded text-blue-600" ${isVendorAllChecked?'checked':''} onchange="toggleVendorGroupDirect('${tn}','${tgt}','${vName}', this.checked)">
-                                    ${vName}
-                                </label>
-                                <button onclick="document.getElementById('${vendorId}').classList.toggle('hidden')" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold">展開/收合</button>
-                            </div>
-                            <div id="${vendorId}" class="pl-1 space-y-2">`;
-                    cargoItems.forEach(item => {
-                        const globalAllocatedWithoutMe = getGlobalAllocated(item.key) - (db.loads[tn][item.key] || 0);
-                        const myMaxPossible = Math.max(0, item.maxBox - globalAllocatedWithoutMe);
-                        let currentAllocated = db.loads[tn][item.key] !== undefined ? db.loads[tn][item.key] : 0;
-                        const isSoldOutByOthers = myMaxPossible <= 0 && currentAllocated === 0;
-                        html += `
-                            <div class="flex items-center justify-between py-2 border-b last:border-0 text-xs ${isSoldOutByOthers?'opacity-30':''}">
-                                <label class="flex items-center flex-1 font-medium pr-2">
-                                    <input type="checkbox" class="w-4 h-4 mr-2 text-blue-600" ${currentAllocated > 0 ? 'checked' : ''} ${isSoldOutByOthers ? 'disabled' : ''} onchange="toggleItemSingle('${tn}','${item.key}', ${myMaxPossible}, this.checked)">
-                                    <div class="truncate">
-                                        <span class="font-black text-slate-800 text-xs block truncate">${item.pName=='SUM'?'總箱點收':item.pName}</span>
-                                        <span class="text-[10px] text-slate-500">對點數: <strong class="text-slate-700">${item.maxBox}</strong> 箱 ${globalAllocatedWithoutMe > 0 ? `| 他車已分: <span class="text-orange-600">${globalAllocatedWithoutMe}</span> 箱` : ''}</span>
-                                    </div>
-                                </label>
-                                <div class="flex items-center gap-1 shrink-0">
-                                    <div class="flex flex-col items-end">
-                                        <div class="flex items-center gap-1">
-                                            <input type="number" min="0" max="${item.maxBox}" class="w-14 border rounded-lg text-center p-1.5 font-black text-blue-600 text-sm focus:ring-2 focus:ring-blue-400" value="${currentAllocated}" ${isSoldOutByOthers ? 'disabled' : ''} oninput="updateAllocatedBoxes('${tn}','${item.key}',${item.maxBox},${globalAllocatedWithoutMe}, this.value, 'hint_${item.key}')">
-                                            <span class="text-[11px] font-bold text-slate-400">箱</span>
-                                        </div>
-                                        <span id="hint_${item.key}" class="text-[9px] text-red-500 font-bold hidden">⚠️ 超過對點總數</span>
-                                    </div>
-                                </div>
-                            </div>`;
-                    });
-                    html += `</div></div>`;
-                });
-            });
-            document.getElementById('load-list').innerHTML = html || "<div class='py-20 text-center text-slate-300'>此車次與全台對點暫無任何貨物數據</div>";
-        }
-
-        function toggleVendorGroupDirect(tn, tgt, vName, isChecked) {
-            Object.keys(db.tally).forEach(key => {
-                if (key.startsWith(`${vName}_${tgt}_`)) {
-                    const maxBox = getFinalBox(vName, tgt, key.split('_')[2]||'SUM').total;
-                    const globalAllocatedWithoutMe = getGlobalAllocated(key) - (db.loads[tn][key] || 0);
-                    const myMaxPossible = Math.max(0, maxBox - globalAllocatedWithoutMe);
-                    if (maxBox > 0) { db.loads[tn][key] = isChecked ? myMaxPossible : 0; }
-                }
-            });
-            dbRef.set(db);
-        }
-        function toggleItemSingle(tn, key, myMaxPossible, isChecked) { db.loads[tn][key] = isChecked ? myMaxPossible : 0; dbRef.set(db); }
-        function updateAllocatedBoxes(tn, key, maxBox, otherAllocated, value, hintId) {
-            let val = parseInt(value) || 0; const hintSpan = document.getElementById(hintId);
-            const absoluteMaxAllowed = maxBox - otherAllocated;
-            if (val < 0) val = 0;
-            if (val > absoluteMaxAllowed) {
-                val = absoluteMaxAllowed;
-                if(hintSpan) { hintSpan.classList.remove('hidden'); setTimeout(() => hintSpan.classList.add('hidden'), 2000); }
-            } else { if(hintSpan) hintSpan.classList.add('hidden'); }
-            db.loads[tn][key] = val; dbRef.set(db);
-        }
-
-        function toggleRepMode(m) {
-            state.repMode = m;
-            const btnItem = document.getElementById('btn-rep-item');
-            const btnDefer = document.getElementById('btn-rep-defer');
-            if (m === 'item') {
-                btnItem.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow text-blue-600";
-                btnDefer.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
-                document.getElementById('report-unit-filter-block').classList.remove('hidden');
-            } else {
-                btnDefer.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow text-orange-600";
-                btnItem.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
-                document.getElementById('report-unit-filter-block').classList.add('hidden');
-            }
-            renderReport();
-        }
-
-        function renderReport() {
-            const vGrid = document.getElementById('rep-vendor-grid');
-            vGrid.innerHTML = db.vendors.map(v => `
-                <button onclick="state.repV='${v.name}';renderReport()" class="p-2 rounded-lg border text-[10px] font-bold ${state.repV===v.name?'bg-blue-600 text-white':'bg-white text-slate-500'}">
-                    ${v.name}
-                </button>
-            `).join('');
-            const uFilterBlock = document.getElementById('report-unit-filter-block');
-            if (state.repMode === 'item') {
-                uFilterBlock.innerHTML = `<button onclick="state.repU='all';renderReport()" class="px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${state.repU==='all'?'bg-slate-800 text-white':'bg-white border'}">全部單位</button>` + db.units.map(u => `<button onclick="state.repU='${u.name}';renderReport()" class="px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${state.repU===u.name?'bg-slate-800 text-white':'bg-white border'}">${u.name}</button>`).join('');
-            }
-            const content = document.getElementById('report-content');
-            if (!state.repV) { content.innerHTML = "<div class='text-center py-12 text-slate-300'>請先點選廠商</div>"; return; }
-            const vendor = db.vendors.find(v => v.name === state.repV); if(!vendor) return;
-
-            if (state.repMode === 'item') {
-                const targetUnits = state.repU === 'all' ? db.units : db.units.filter(u => u.name === state.repU);
-                content.innerHTML = targetUnits.map(u => {
-                    const itemsHtml = vendor.mode === 'detail' ? (vendor.items || []).map(p => {
-                        const key = `${vendor.name}_${u.name}_${p.name}`;
-                        const finalBox = getFinalBox(vendor.name, u.name, p.name);
-                        const allocated = getGlobalAllocated(key);
-                        const unallocated = Math.max(0, finalBox.total - allocated);
-                        if (finalBox.total <= 0) return '';
-                        return `<div class="flex justify-between text-xs py-1.5 border-b last:border-0">
-                            <span class="font-medium">${p.name} <span class="text-[10px] text-slate-400">(總點收:${finalBox.display})</span></span>
-                            <div class="space-x-2 font-bold"><span class="text-blue-600">實到:${finalBox.total}</span><span class="text-green-600">已配:${allocated}</span><span class="${unallocated>0?'text-orange-500':'text-slate-400'}">剩餘:${unallocated}</span></div>
-                        </div>`;
-                    }).join('') : (() => {
-                        const key = `${vendor.name}_${u.name}_SUM`;
-                        const finalBox = getFinalBox(vendor.name, u.name, 'SUM');
-                        const allocated = getGlobalAllocated(key);
-                        const unallocated = Math.max(0, finalBox.total - allocated);
-                        if (finalBox.total <= 0) return '';
-                        return `<div class="flex justify-between text-xs py-2">
-                            <span class="font-black text-slate-700">總箱數點收型</span>
-                            <div class="space-x-2 font-bold"><span class="text-blue-600">實到:${finalBox.total}</span><span class="text-green-600">已配:${allocated}</span><span class="${unallocated>0?'text-orange-500':'text-slate-400'}">剩餘:${unallocated}</span></div>
-                        </div>`;
-                    })();
-                    if (!itemsHtml || itemsHtml.trim() === '') return '';
-                    return `<div class="bg-white p-4 rounded-xl border border-l-4 zone-${u.zone} shadow-sm">
-                        <div class="font-black text-xs text-slate-700 mb-2 border-b pb-1 flex justify-between"><span>📍 ${u.name}</span><span class="text-[10px] text-slate-400">${u.zone}區</span></div>
-                        <div class="divide-y divide-slate-100">${itemsHtml}</div>
-                    </div>`;
-                }).join('') || "<div class='text-center py-12 text-slate-300 font-bold text-xs'>該廠商在目前所選單位範圍內尚無任何對點進貨數據</div>";
-            } else {
-                let deferHtml = "";
-                db.units.forEach(u => {
-                    let uDiffHtml = "";
-                    const key = `${vendor.name}_${u.name}_SUM`;
-                    const trackData = db.tracks[key] || [0,0,0,0];
-                    const finalBox = getFinalBox(vendor.name, u.name, vendor.mode==='detail'?'':'SUM');
-                    
-                    let computedTotalInTally = 0;
-                    if (vendor.mode === 'detail') {
-                        (vendor.items || []).forEach(p => { computedTotalInTally += getFinalBox(vendor.name, u.name, p.name).total; });
-                    } else {
-                        computedTotalInTally = finalBox.total;
-                    }
-
-                    let allocatedToTrucks = 0;
-                    if (vendor.mode === 'detail') {
-                        (vendor.items || []).forEach(p => { allocatedToTrucks += getGlobalAllocated(`${vendor.name}_${u.name}_${p.name}`); });
-                    } else {
-                        allocatedToTrucks = getGlobalAllocated(key);
-                    }
-
-                    const deferBox = Math.max(0, computedTotalInTally - allocatedToTrucks);
-                    if (computedTotalInTally <= 0) return;
-
-                    uDiffHtml += `
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 bg-slate-50 p-3 rounded-lg border">
-                            <div><span class="text-[10px] text-slate-400 block font-bold">應撥/實到總數</span><strong class="text-blue-700 text-sm font-black">${computedTotalInTally} 箱</strong></div>
-                            <div><span class="text-[10px] text-slate-400 block font-bold">已載走箱數</span><strong class="text-green-600 text-sm font-black">${allocatedToTrucks} 箱</strong></div>
-                            <div class="col-span-2"><span class="text-[10px] text-red-500 block font-black">現場留置 / 遞延未上車</span><strong class="text-red-500 text-sm font-black">${deferBox} 箱</strong></div>
-                        </div>
-                        <div class="mt-3">
-                            <span class="text-[10px] text-slate-500 font-black block mb-1">🚚 轉運線物流追蹤與異常備註登錄：</span>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div class="bg-white p-2 rounded border"><span class="text-[9px] text-slate-400 block">① 現場留底箱數</span><input type="number" class="w-full font-black text-xs border-b focus:border-blue-500 text-slate-700" value="${trackData[0]||0}" onchange="saveTrack('${key}', 0, this.value)"></div>
-                                <div class="bg-white p-2 rounded border"><span class="text-[9px] text-slate-400 block">② 遞延跨日箱數</span><input type="number" class="w-full font-black text-xs border-b focus:border-blue-500 text-slate-700" value="${trackData[1]||0}" onchange="saveTrack('${key}', 1, this.value)"></div>
-                                <div class="bg-white p-2 rounded border"><span class="text-[9px] text-slate-400 block">③ 破損/報廢箱數</span><input type="number" class="w-full font-black text-xs border-b focus:border-red-500 text-red-600" value="${trackData[2]||0}" onchange="saveTrack('${key}', 2, this.value)"></div>
-                                <div class="bg-white p-2 rounded border"><span class="text-[9px] text-slate-400 block">④ 差異備註原因</span><input type="text" class="w-full font-bold text-xs border-b focus:border-blue-500 text-slate-600 placeholder:text-slate-300 placeholder:font-normal" placeholder="例: 漏上車、改明日發" value="${trackData[3]||''}" onchange="saveTrack('${key}', 3, this.value, false)"></div>
-                            </div>
-                        </div>`;
-
-                    deferHtml += `<div class="bg-white p-4 rounded-xl border border-l-4 zone-${u.zone} shadow-sm">
-                        <div class="font-black text-xs text-slate-800 border-b pb-1.5 flex justify-between"><span>🏢 目的地：${u.name}</span><span class="unit-tag bg-unit-${u.zone}">${u.zone}區 / ${u.type}</span></div>
-                        ${uDiffHtml}
-                    </div>`;
-                });
-                content.innerHTML = deferHtml || "<div class='text-center py-12 text-slate-300 font-bold text-xs'>目前沒有任何廠商進貨數據可產生遞延單</div>";
-            }
-        }
-
-        function saveTrack(k, i, v, forceNegative=false) {
-            if (!db.tracks[k]) db.tracks[k] = [0, 0, 0, ''];
-            let num = parseFloat(v) || 0; if (forceNegative && num > 0) { num = -num; } db.tracks[k][i] = num; save();
-        }
-        function calcU(vn, un) { const v = db.vendors.find(x=>x.name===vn); if(!v)return 0; const items = v.mode==='detail' ? v.items : [{name:'SUM'}]; return items.reduce((acc,p)=>acc+getFinalBox(vn, un, p.name).total, 0); }
-
-        function renderManage() {
-            document.getElementById('m-trucks').innerHTML = db.trucks.map((t, ti) => `
-                <div class="p-3 bg-slate-50 rounded-xl border space-y-2">
-                    <div class="flex justify-between items-center">
-                        <input type="text" class="font-black text-sm bg-transparent border-b border-transparent focus:border-slate-400 px-1" value="${t.name}" onchange="dbE('trucks',${ti},'name',this.value)">
-                        <button onclick="dbDel('trucks',${ti})" class="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md">刪除</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="bg-white p-2 rounded-lg border"><span class="text-[9px] text-slate-400 block font-bold">載重上限 (箱)</span><input type="number" class="w-full font-black text-blue-600 text-xs" value="${t.limit||300}" onchange="dbE('trucks',${ti},'limit',parseInt(this.value)||0)"></div>
-                        <div class="bg-white p-2 rounded-lg border"><span class="text-[9px] text-slate-400 block font-bold">司機/車號資訊</span><input type="text" class="w-full font-bold text-slate-600 text-xs" value="${t.driver||''}" placeholder="未設定" onchange="dbE('trucks',${ti},'driver',this.value)"></div>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-400 font-black block mb-1">📍 綁定此車次的目的地路線 (可多選)：</span>
-                        <div class="flex flex-wrap gap-1.5 p-1 bg-white rounded-lg border max-h-24 overflow-y-auto">${db.units.map(u => `<button onclick="tglTgt(${ti},'${u.name}')" class="px-2 py-1 rounded text-[10px] font-bold border transition-all ${(t.targets||[]).includes(u.name)?'bg-blue-600 border-blue-600 text-white font-black shadow-sm':'bg-slate-50 text-slate-500 hover:bg-slate-100'}">${u.name}</button>`).join('')}</div>
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('m-vendors').innerHTML = db.vendors.map((v, vi) => `
-                <div class="p-3 bg-slate-50 rounded-xl border space-y-2">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <input type="text" class="font-black text-sm bg-transparent border-b border-transparent focus:border-slate-400 px-1" value="${v.name}" onchange="dbE('vendors',${vi},'name',this.value)">
-                            <select onchange="dbE('vendors',${vi},'mode',this.value)" class="text-[10px] font-bold bg-white border rounded p-0.5 text-slate-600"><option value="detail" ${v.mode==='detail'?'selected':''}>明細點收</option><option value="sum" ${v.mode==='sum'?'selected':''}>總箱數型</option></select>
-                        </div>
-                        <button onclick="dbDel('vendors',${vi})" class="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md">刪除廠商</button>
-                    </div>
-                    ${v.mode==='detail'?`
-                    <div class="bg-white p-2 rounded-lg border space-y-1">
-                        <span class="text-[10px] text-slate-400 font-black block">品項明細清單與規格：</span>
-                        <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">${(v.items||[]).map((p, pi) => `
-                            <div class="flex gap-2 items-center bg-slate-50 p-1.5 rounded border text-xs">
-                                <input type="text" class="flex-1 font-bold bg-transparent border-b border-transparent focus:border-slate-300" value="${p.name}" onchange="subE(${vi},${pi},'name',this.value)">
-                                <div class="flex items-center gap-1 shrink-0"><span class="text-[9px] text-slate-400">箱入:</span><input type="number" class="w-10 text-center font-black text-blue-600 border rounded" value="${p.pcs}" onchange="subE(${vi},${pi},'pcs',parseInt(this.value)||1)"></div>
-                                <button onclick="db.vendors[vi].items.splice(${pi},1);save()" class="text-red-500 text-[10px] font-bold px-1">✕</button>
-                            </div>
-                        `).join('')}</div>
-                        <button onclick="subA(${vi})" class="w-full mt-1 py-1 text-[10px] text-green-600 border border-dashed border-green-200 rounded font-bold">+ 新增商品品項</button>
-                    </div>`:''}
-                </div>
-            `).join('');
-
-            document.getElementById('m-units').innerHTML = db.units.map((u, ui) => `
-                <div class="flex flex-wrap md:flex-nowrap gap-2 items-center p-2.5 bg-slate-50 rounded-xl border text-xs">
-                    <input type="text" class="font-black text-slate-700 bg-transparent border-b border-transparent focus:border-slate-400 w-24" value="${u.name}" onchange="dbE('units',${ui},'name',this.value)">
-                    <div class="flex gap-1 items-center shrink-0"><span class="text-[10px] text-slate-400">分區:</span><select onchange="dbE('units',${ui},'zone',this.value)" class="bg-white border rounded p-0.5 font-bold"><option value="北" ${u.zone==='北'?'selected':''}>北區</option><option value="中" ${u.zone==='中'?'selected':''}>中區</option><option value="南" ${u.zone==='南'?'selected':''}>南區</option></select></div>
-                    <div class="flex gap-1 items-center shrink-0"><span class="text-[10px] text-slate-400">類別:</span><select onchange="dbE('units',${ui},'type',this.value)" class="bg-white border rounded p-0.5 font-bold"><option value="庫" ${u.type==='庫'?'selected':''}>在庫</option><option value="直" ${u.type==='直'?'selected':''}>直發</option></select></div>
-                    <div class="flex-1 text-right"><button onclick="dbDel('units',${ui})" class="text-red-500 font-bold px-2 py-1 bg-red-50 rounded">刪除</button></div>
-                </div>
-            `).join('');
-        }
-
-        function dbAdd(k) {
-            if(k==='trucks') db.trucks.push({name:'新車次',limit:300,driver:'',targets:[]});
-            if(k==='vendors') db.vendors.push({name:'新廠商',mode:'detail',items:[{name:'商品A',pcs:10}]});
-            if(k==='units') db.units.push({name:'新單位',zone:'北',type:'庫'});
-            save();
-        }
-        function dbE(k,i,f,v) { db[k][i][f]=v; save(); }
-        function dbDel(k,i) {
-            showCustomConfirm({
-                title: "⚠️ 刪除資料確認",
-                msg: `您確定要將此筆 ${k==='trucks'?'車次':k==='vendors'?'廠商':'單位'} 資料全面刪除嗎？這將無法復原。`,
-                isDanger: true,
-                onConfirm: () => { db[k].splice(i,1); save(); }
-            });
-        }
-        function askDailyReset() {
-            showCustomConfirm({
-                title: "⚠️ 全台實時日結清空確認",
-                msg: "這將會把「所有連線設備」今日的對點、配載、追蹤數據全部全面清除！(基礎車次與廠商主資料會保留)，確定執行嗎？",
-                isDanger: true,
-                onConfirm: () => { db.tally={}; db.loads={}; db.tracks={}; db.okStatus={}; save(); }
-            });
-        }
-
-        function subA(vi) { if(!db.vendors[vi].items) db.vendors[vi].items=[]; db.vendors[vi].items.push({name:'新商品',pcs:10}); save(); }
-        function subE(vi,pi,k,v) { db.vendors[vi].items[pi][k]=v; save(); }
-        function tglTgt(ti,un) { if(!db.trucks[ti].targets) db.trucks[ti].targets=[]; const idx=db.trucks[ti].targets.indexOf(un); if(idx>-1)db.trucks[ti].targets.splice(idx,1); else db.trucks[ti].targets.push(un); save(); }
-        function selVendor(n) { state.curV=n; refreshUI(); }
-        function adjOff(k,v) { if(!db.tally[k])db.tally[k]={box:0,rem:0,offset:0}; let nextOffset = (db.tally[k].offset||0) + v; db.tally[k].offset = nextOffset; save(); }
-
-        function openCalc(key, field, curVal, label) {
-            state.calc = { key, field, base: curVal, buffer: '', op: null, opBase: null, hasCleared: false };
-            document.getElementById('calc-label').innerText = label;
-            document.getElementById('calc-hist').innerText = `目前值: ${curVal}`;
-            document.getElementById('calc-disp').innerText = curVal;
-            document.getElementById('calc-pop').classList.replace('hidden', 'flex');
-        }
-        function closeCalc() { document.getElementById('calc-pop').classList.replace('flex', 'hidden'); state.calc = null; }
-        function cInput(num) {
-            if(!state.calc) return;
-            if(state.calc.buffer === '0') state.calc.buffer = '';
-            state.calc.buffer += num;
-            document.getElementById('calc-disp').innerText = state.calc.buffer;
-        }
-        function cOp(operator) {
-            if(!state.calc) return;
-            let currentNum = parseInt(state.calc.buffer) || 0;
-            if(!state.calc.buffer && state.calc.opBase === null) { currentNum = state.calc.base; }
-            state.calc.opBase = state.calc.opBase !== null ? eval(`${state.calc.opBase}${state.calc.op}${currentNum}`) : currentNum;
-            state.calc.op = operator;
-            state.calc.buffer = '';
-            document.getElementById('calc-hist').innerText = `${state.calc.opBase} ${operator}`;
-            document.getElementById('calc-disp').innerText = '0';
-        }
-        function cClear() {
-            if(!state.calc) return;
-            if(state.calc.buffer === '' && !state.calc.hasCleared) {
-                state.calc.base = 0;
-                state.calc.buffer = '0';
-                state.calc.op = null;
-                state.calc.opBase = null;
-                state.calc.hasCleared = true;
-                document.getElementById('calc-hist').innerText = '連按效果：直接歸零';
-                document.getElementById('calc-disp').innerText = '0';
-                return;
-            }
-            state.calc.buffer = '';
-            state.calc.op = null;
-            state.calc.opBase = null;
-            document.getElementById('calc-hist').innerText = '';
-            document.getElementById('calc-disp').innerText = '0';
-        }
-        function cOk() {
-            if(!state.calc) return;
-            let finalVal = parseInt(state.calc.buffer) || 0;
-            if(state.calc.op && state.calc.opBase !== null) {
-                finalVal = eval(`${state.calc.opBase}${state.calc.op}${finalVal}`);
-            } else if(!state.calc.buffer) {
-                finalVal = state.calc.base;
-            }
-            if(finalVal < 0) finalVal = 0;
-            if(!db.tally[state.calc.key]) db.tally[state.calc.key] = { box: 0, rem: 0, offset: 0 };
-            db.tally[state.calc.key][state.calc.field] = finalVal;
-            closeCalc();
-            save();
-        }
-        function closeLoad() { document.getElementById('load-selector').classList.add('hidden'); state.activeTruck = null; refreshUI(); }
-
-        function updateNavStyles(activeTabName) {
-            tabOrder.forEach(t => {
-                const btn = document.getElementById('nav-' + t);
-                if(t === activeTabName) { btn.className = "flex-1 h-full text-sm font-bold transition-colors nav-active"; }
-                else { btn.className = "flex-1 h-full text-sm font-bold text-slate-600 transition-colors"; }
-            });
-        }
-
-        // 💡 核心優化：switchTab 按鈕切換改為驅動橫向滾動，並強制分頁置頂
-        function switchTab(tabName) {
-            state.tab = tabName;
-            updateNavStyles(tabName);
-            
-            const targetSection = document.getElementById('tab-' + tabName);
-            if (targetSection) {
-                isProgrammaticScroll = true;
-                // 分頁更換後，立刻將內容回捲到最頂端，維持介面整潔乾淨
-                targetSection.scrollTop = 0;
-                
-                targetSection.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                // 滾動結束後解除鎖定旗標
-                setTimeout(() => { isProgrammaticScroll = false; }, 400);
-            }
-            refreshUI();
-        }
-
-        function refreshUI() {
-            if(state.tab === 'check') renderCheck();
-            if(state.tab === 'loading') renderLoading();
-            if(state.tab === 'report') renderReport();
-            if(state.tab === 'manage') renderManage();
-        }
-
-        // 💡 新增：全自動 IntersectionObserver 滑動捕捉機制 (每次移動一個介面，並在更換介面時先回頂端)
-        window.addEventListener('DOMContentLoaded', () => {
-            const container = document.getElementById('main-swipe-container');
-            const sections = tabOrder.map(t => document.getElementById('tab-' + t));
-            
-            const observerOptions = {
-                root: container,
-                threshold: 0.5 // 當滑動露出面積超過 50%，立即判定進入該分頁面板
-            };
-
-            const observer = new IntersectionObserver((entries) => {
-                if (isProgrammaticScroll) return; // 點擊導覽按鈕引起的滾動直接略過，不互相干擾
-                
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const activeTabName = entry.target.id.replace('tab-', '');
-                        state.tab = activeTabName;
-                        
-                        // 💡 滿足需求：切換新介面時，先將其滾動回到最頂端
-                        entry.target.scrollTop = 0;
-                        
-                        updateNavStyles(activeTabName);
-                        refreshUI();
-                    }
-                });
-            }, observerOptions);
-
-            sections.forEach(section => { if(section) observer.observe(section); });
-        });
-    </script>
-</body>
-</html>
+                        <div class="w-full bg-slate-100
