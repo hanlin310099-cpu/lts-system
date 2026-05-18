@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTS 轉運系統 - 行政商品進貨預計端</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input:focus { background-color: #f0fdf4; border-color: #16a34a !important; outline: none; }
+        .table-container { max-height: 75vh; overflow-y: auto; }
+        th { sticky top: 0; background-color: #1e293b; color: white; z-index: 10; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen pb-12">
+
+    <header class="bg-slate-800 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📊</span>
+                <div>
+                    <h1 class="font-black text-lg leading-tight">LTS 轉運系統 (行政商品主控後台)</h1>
+                    <p class="text-[10px] text-slate-400">依商品品項橫向拆解・自動箱數尾數換算防呆版</p>
+                </div>
+            </div>
+            <div id="sync-status" class="bg-yellow-500 text-white text-xs px-3 py-1 rounded-full font-bold animate-pulse">
+                雲端連線中...
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-1 space-y-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border">
+                <h2 class="font-black text-sm text-slate-700 border-b pb-2 mb-3 flex items-center gap-2">
+                    <span>🏭</span> 選擇當日進貨廠商
+                </h2>
+                <div id="admin-vendor-list" class="space-y-2">
+                    <div class="text-slate-300 text-xs text-center py-8">讀取雲端資料中...</div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl shadow-sm border">
+                <h2 class="font-black text-xs text-red-600 mb-2 flex items-center gap-1">
+                    <span>⚠️</span> 每日更新維護
+                </h2>
+                <button onclick="clearAllExpectedData()" class="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-black rounded-lg transition-all active:scale-95">
+                    🗑️ 清空今日所有預計量
+                </button>
+                <p class="text-[10px] text-slate-400 mt-1.5 leading-relaxed">此操作僅清除行政 key 單的「預計出貨個數」，不會影響現場已點收的數據與基礎廠商商品名單。</p>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-4">
+            <div id="workspace-header" class="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-slate-400 font-bold block">目前選定廠商</span>
+                    <h2 id="current-vendor-title" class="text-xl font-black text-green-600">請從左側點選廠商</h2>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="saveAllExpected()" id="btn-save-vendor" class="hidden px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-black rounded-lg shadow-md transition-all">
+                        💾 儲存該廠今日預計量
+                    </button>
+                </div>
+            </div>
+
+            <div id="table-wrapper" class="bg-white rounded-xl shadow-sm border overflow-hidden hidden">
+                <div class="table-container">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-800 text-slate-200 uppercase font-black">
+                                <th class="p-3 border-b border-slate-700">1. 商品品項</th>
+                                <th class="p-3 border-b border-slate-700 text-center w-20">2. 箱入數</th>
+                                <th class="p-3 border-b border-slate-700 w-28">3. 單位名稱</th>
+                                <th class="p-3 border-b border-slate-700 text-center w-32">4. 出貨個數(Pcs)</th>
+                                <th class="p-3 border-b border-slate-700 text-center w-20">5. 整箱數</th>
+                                <th class="p-3 border-b border-slate-700 text-center w-20">6. 尾數</th>
+                                <th class="p-3 border-b border-slate-700 text-center bg-blue-900 text-white w-24">7. 總用箱數</th>
+                            </tr>
+                        </thead>
+                        <tbody id="product-table-body" class="divide-y divide-slate-200">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="empty-hint" class="bg-white p-12 text-center rounded-xl border text-slate-400 font-medium text-xs">
+                請先點擊左側廠商以載入商品結構表格。
+            </div>
+        </div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        const FIREBASE_DB_URL = "https://lts-system2-default-rtdb.firebaseio.com/"; 
+        firebase.initializeApp({ databaseURL: FIREBASE_DB_URL });
+        const dbRef = firebase.database().ref("LTS_SYSTEM_DATA");
+        let db = { vendors: [], units: [], tally: {} };
+        let selectedVendorName = null;
+
+        dbRef.on('value', (snapshot) => {
+            const cloudData = snapshot.val();
+            if (cloudData) {
+                db = cloudData;
+                if(!db.tally) db.tally = {};
+                document.getElementById('sync-status').innerText = "● 雲端連線正常 (實時同步)";
+                document.getElementById('sync-status').className = "bg-green-600 text-white text-xs px-3 py-1 rounded-full font-bold";
+                renderVendorList();
+                if (selectedVendorName) renderProductTable();
+            }
+        });
+
+        function renderVendorList() {
+            const container = document.getElementById('admin-vendor-list');
+            if (!db.vendors || db.vendors.length === 0) {
+                container.innerHTML = `<div class="text-slate-400 text-xs text-center py-4">無廠商資料</div>`;
+                return;
+            }
+            container.innerHTML = db.vendors.map(v => `
+                <button onclick="selectVendor('${v.name}')" class="w-full text-left p-3 rounded-lg text-xs font-bold border flex justify-between items-center ${selectedVendorName === v.name ? 'bg-green-600 text-white border-green-600 shadow-md' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}">
+                    <span>🏭 ${v.name}</span>
+                    <span class="text-[10px] opacity-70">${v.mode === 'detail' ? '明細' : '總箱'}</span>
+                </button>
+            `).join('');
+        }
+
+        function selectVendor(name) {
+            selectedVendorName = name;
+            document.getElementById('btn-save-vendor').classList.remove('hidden');
+            document.getElementById('table-wrapper').classList.remove('hidden');
+            document.getElementById('empty-hint').classList.add('hidden');
+            renderVendorList();
+            renderProductTable();
+        }
+
+        function renderProductTable() {
+            const vendor = db.vendors.find(v => v.name === selectedVendorName);
+            if(!vendor) return;
+            document.getElementById('current-vendor-title').innerText = `【${vendor.name}】今日預計到貨量排單`;
+            const tbody = document.getElementById('product-table-body');
+            if (!db.units || db.units.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">請先至現場端設定目的地單位。</td></tr>`;
+                return;
+            }
+            let html = "";
+            if (vendor.mode === 'detail') {
+                const items = vendor.items || [];
+                if (items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">該廠商尚未建立任何商品品項。</td></tr>`;
+                    return;
+                }
+                items.forEach((p, pIdx) => {
+                    db.units.forEach((u, uIdx) => {
+                        const key = `${vendor.name}_${u.name}_${p.name}`;
+                        const savedExpectedPcs = db.tally[key]?.expectedPcs || "";
+                        let pcs = parseInt(savedExpectedPcs) || 0;
+                        let box入 = parseInt(p.pcs) || 10;
+                        let expectedBox = Math.floor(pcs / box入);
+                        let expectedRem = pcs % box入;
+                        let totalBoxesUsed = expectedBox + (expectedRem > 0 ? 1 : 0);
+
+                        html += `
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                ${uIdx === 0 ? `<td rowspan="${db.units.length}" class="p-3 font-black text-slate-900 bg-slate-50/50 border-r font-medium max-w-[150px] truncate">${p.name}</td>` : ''}
+                                ${uIdx === 0 ? `<td rowspan="${db.units.length}" class="p-3 text-center font-bold text-slate-500 bg-slate-50/50 border-r">${p.pcs}</td>` : ''}
+                                <td class="p-3 font-bold text-slate-700 bg-white">${u.name} <span class="text-[9px] text-slate-400 font-normal">(${u.zone}區)</span></td>
+                                <td class="p-2 bg-white text-center">
+                                    <input type="number" min="0" 
+                                        data-key="${key}" data-pcs="${p.pcs}"
+                                        class="pcs-input w-full border border-slate-300 rounded px-2 py-1 text-center font-black text-slate-800 focus:ring-2 focus:ring-green-400" 
+                                        value="${savedExpectedPcs}" placeholder="0"
+                                        oninput="reCalcRow(this)">
+                                </td>
+                                <td id="box_${key}" class="p-3 text-center font-bold text-slate-600 bg-slate-50/30">${pcs > 0 ? expectedBox : 0}</td>
+                                <td id="rem_${key}" class="p-3 text-center font-bold text-blue-600 bg-slate-50/30">${pcs > 0 ? expectedRem : 0}</td>
+                                <td id="total_${key}" class="p-3 text-center font-black text-blue-800 bg-blue-50/50 text-sm">${pcs > 0 ? totalBoxesUsed : 0}</td>
+                            </tr>
+                        `;
+                    });
+                });
+            } else {
+                db.units.forEach(u => {
+                    const key = `${vendor.name}_${u.name}_SUM`;
+                    const savedExpected = db.tally[key]?.expected || "";
+                    html += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-black text-slate-500 italic">（此廠商僅點總箱數）</td>
+                            <td class="p-3 text-center text-slate-400">-</td>
+                            <td class="p-3 font-bold text-slate-700">${u.name}</td>
+                            <td class="p-2 text-center bg-yellow-50/50" colspan="3">
+                                <span class="text-[10px] text-slate-400 mr-2">直接輸入預計箱數：</span>
+                                <input type="number" min="0" data-key="${key}" data-mode="sum" class="pcs-input w-32 border border-slate-300 rounded px-2 py-1 text-center font-black text-slate-800" value="${savedExpected}" placeholder="預計箱數">
+                            </td>
+                            <td class="p-3 text-center bg-blue-50 text-blue-800 font-black">-</td>
+                        </tr>
+                    `;
+                });
+            }
+            tbody.innerHTML = html;
+        }
+
+        function reCalcRow(input) {
+            const key = input.getAttribute('data-key');
+            const packPcs = parseInt(input.getAttribute('data-pcs')) || 10;
+            let val = parseInt(input.value) || 0;
+            let expectedBox = Math.floor(val / packPcs);
+            let expectedRem = val % packPcs;
+            let totalBoxesUsed = expectedBox + (expectedRem > 0 ? 1 : 0);
+            document.getElementById(`box_${key}`).innerText = val > 0 ? expectedBox : 0;
+            document.getElementById(`rem_${key}`).innerText = val > 0 ? expectedRem : 0;
+            document.getElementById(`total_${key}`).innerText = val > 0 ? totalBoxesUsed : 0;
+        }
+
+        function saveAllExpected() {
+            const inputs = document.querySelectorAll('.pcs-input');
+            inputs.forEach(input => {
+                const key = input.getAttribute('data-key');
+                const mode = input.getAttribute('data-mode');
+                let val = parseInt(input.value) || 0;
+                if (!db.tally[key]) db.tally[key] = { box: 0, rem: 0, offset: 0, expected: 0, expectedPcs: 0, expectedRem: 0 };
+                if (mode === 'sum') {
+                    db.tally[key].expected = val;
+                } else {
+                    const packPcs = parseInt(input.getAttribute('data-pcs')) || 10;
+                    db.tally[key].expectedPcs = val;
+                    let eBox = Math.floor(val / packPcs);
+                    let eRem = val % packPcs;
+                    db.tally[key].expected = eBox + (eRem > 0 ? 1 : 0); // 總用箱數
+                    db.tally[key].expectedBoxOnly = eBox; // 純整箱數
+                    db.tally[key].expectedRem = eRem;     // 尾數
+                }
+            });
+            dbRef.set(db).then(() => { alert(`🎉 數據已同步至雲端！`); });
+        }
+
+        // 行政清除按鈕邏輯
+        function clearAllExpectedData() {
+            if (confirm("⚠️ 確定要清空今天「所有廠商」的行政預計出貨量嗎？\n(此操作不會影響現場點收數據)")) {
+                if(db.tally) {
+                    Object.keys(db.tally).forEach(key => {
+                        db.tally[key].expected = 0;
+                        db.tally[key].expectedPcs = 0;
+                        db.tally[key].expectedBoxOnly = 0;
+                        db.tally[key].expectedRem = 0;
+                    });
+                }
+                dbRef.set(db).then(() => { alert("🧹 今日預計到貨量已全部清空歸零！"); });
+            }
+        }
+    </script>
+</body>
+</html>
