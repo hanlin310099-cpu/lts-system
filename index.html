@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LTS 物流對點轉運系統 (行政實時聯動防呆版)</title>
+    <title>LTS 物流對點轉運系統 (全模組完整版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .nav-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: 900; background-color: #eff6ff; }
@@ -26,8 +26,8 @@
     <main class="p-3 max-w-5xl mx-auto pb-32 mt-2">
         <section id="tab-check" class="space-y-3">
             <div class="flex justify-between items-center bg-white p-2 rounded-xl shadow-sm border">
-                <button onclick="askDailyReset()" class="bg-red-500 text-white px-3 py-2 rounded-lg font-bold text-xs active:scale-95">日結清空</button>
-                <div id="check-header" class="text-blue-600 font-black text-sm truncate">請先點選廠商卡片</div>
+                <button onclick="askDailyReset()" class="bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg font-bold text-xs active:scale-95">全台實時日結</button>
+                <div id="check-header" class="text-blue-600 font-black text-sm truncate">請點選下方廠商</div>
             </div>
             <div id="check-vendor-grid" class="grid compact-grid gap-2"></div>
             <div id="check-workspace" class="hidden space-y-3">
@@ -39,6 +39,7 @@
         <section id="tab-loading" class="hidden-tab space-y-4">
             <div class="flex gap-2 overflow-x-auto pb-1 bg-white p-2 rounded-xl border shadow-sm" id="loading-unit-tabs"></div>
             <div id="truck-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            
             <div id="load-selector" class="hidden fixed inset-0 bg-white z-[60] overflow-y-auto p-4">
                 <div class="flex justify-between items-center border-b pb-3 mb-4 sticky top-0 bg-white">
                     <div>
@@ -57,23 +58,22 @@
                 <button onclick="toggleRepMode('defer')" id="btn-rep-defer" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500">智能預排遞延單</button>
             </div>
             <div id="rep-vendor-grid" class="grid compact-grid gap-2"></div>
-            <div id="report-unit-filter-block" class="flex gap-2 overflow-x-auto pb-1"></div>
             <div id="report-content" class="space-y-4"></div>
         </section>
 
         <section id="tab-manage" class="hidden-tab space-y-6">
             <div class="bg-white p-4 rounded-xl shadow-sm border">
-                <h2 class="font-black border-l-4 border-blue-600 pl-2 mb-4">車次設定</h2>
+                <h2 class="font-black border-l-4 border-blue-600 pl-2 mb-4 text-sm">車次設定</h2>
                 <div id="m-trucks" class="space-y-3"></div>
                 <button onclick="dbAdd('trucks')" class="w-full mt-3 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg text-xs font-bold">+ 新增車次</button>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border">
-                <h2 class="font-black border-l-4 border-green-600 pl-2 mb-4">廠商與品項分層</h2>
+                <h2 class="font-black border-l-4 border-green-600 pl-2 mb-4 text-sm">廠商與品項分層</h2>
                 <div id="m-vendors" class="space-y-4"></div>
                 <button onclick="dbAdd('vendors')" class="w-full mt-3 py-2 border-2 border-dashed border-green-300 text-green-600 rounded-lg text-xs font-bold">+ 新增廠商</button>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border">
-                <h2 class="font-black border-l-4 border-orange-500 pl-2 mb-4">單位與分區設定</h2>
+                <h2 class="font-black border-l-4 border-orange-500 pl-2 mb-4 text-sm">單位與分區設定</h2>
                 <div id="m-units" class="space-y-2"></div>
                 <button onclick="dbAdd('units')" class="w-full mt-3 py-2 border-2 border-dashed border-orange-300 text-orange-600 rounded-lg text-xs font-bold">+ 新增單位</button>
             </div>
@@ -81,24 +81,19 @@
     </main>
 
     <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t shadow-lg">
-        <nav class="max-w-5xl mx-auto">
-            <div class="flex justify-around items-center h-16">
-                <button onclick="switchTab('check')" id="nav-check" class="flex-1 h-full text-sm font-bold text-slate-600">現場對點</button>
-                <button onclick="switchTab('loading')" id="nav-loading" class="flex-1 h-full text-sm font-bold text-slate-600">精細配載</button>
-                <button onclick="switchTab('report')" id="nav-report" class="flex-1 h-full text-sm font-bold text-slate-600">報表/遞延</button>
-                <button onclick="switchTab('manage')" id="nav-manage" class="flex-1 h-full text-sm font-bold text-slate-600">維護管理</button>
-            </div>
+        <nav class="max-w-5xl mx-auto flex justify-around items-center h-16">
+            <button onclick="switchTab('check')" id="nav-check" class="flex-1 h-full text-xs font-bold text-slate-600">現場對點</button>
+            <button onclick="switchTab('loading')" id="nav-loading" class="flex-1 h-full text-xs font-bold text-slate-600">精細配載</button>
+            <button onclick="switchTab('report')" id="nav-report" class="flex-1 h-full text-xs font-bold text-slate-600">報表/遞延</button>
+            <button onclick="switchTab('manage')" id="nav-manage" class="flex-1 h-full text-xs font-bold text-slate-600">維護管理</button>
         </nav>
     </div>
 
     <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[200] hidden items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-4 transform transition-all scale-95 opacity-0 duration-200" id="confirm-box">
-            <div class="flex items-center gap-3">
-                <div id="confirm-icon-bg" class="w-10 h-10 rounded-full flex items-center justify-center bg-red-100 text-red-600"><span>⚠️</span></div>
-                <h3 id="confirm-title" class="font-black text-slate-800 text-base">系統確認</h3>
-            </div>
-            <p id="confirm-msg" class="text-xs text-slate-500 font-medium">您確定要執行此操作嗎？</p>
-            <div class="flex gap-2 justify-end pt-2">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-4" id="confirm-box">
+            <h3 id="confirm-title" class="font-black text-slate-800">系統確認</h3>
+            <p id="confirm-msg" class="text-xs text-slate-500 font-medium"></p>
+            <div class="flex gap-2 justify-end">
                 <button id="confirm-btn-cancel" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl">取消</button>
                 <button id="confirm-btn-action" class="px-5 py-2 bg-red-500 text-white text-xs font-bold rounded-xl shadow-sm">確定</button>
             </div>
@@ -108,10 +103,7 @@
     <div id="calc-pop" class="fixed inset-0 bg-black/60 z-[100] hidden items-end">
         <div class="bg-white w-full rounded-t-[2.5rem] p-6 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <div class="flex flex-col">
-                    <span id="calc-label" class="font-black text-blue-600 text-lg">數量輸入</span>
-                    <span class="text-[10px] text-slate-400">連按 [C] 可將數據直接歸零</span>
-                </div>
+                <span id="calc-label" class="font-black text-blue-600 text-lg">數量輸入</span>
                 <button onclick="closeCalc()" class="text-slate-400 bg-slate-100 p-2 rounded-full">✕</button>
             </div>
             <div class="bg-slate-100 p-6 rounded-2xl text-right mb-6">
@@ -119,20 +111,10 @@
                 <div id="calc-disp" class="text-5xl font-black text-slate-800 font-mono truncate">0</div>
             </div>
             <div class="grid grid-cols-4 gap-3">
-                <button class="calc-btn" onclick="cInput('7')">7</button>
-                <button class="calc-btn" onclick="cInput('8')">8</button>
-                <button class="calc-btn" onclick="cInput('9')">9</button>
-                <button class="calc-btn bg-orange-100 text-orange-600" onclick="cOp('+')">+</button>
-                <button class="calc-btn" onclick="cInput('4')">4</button>
-                <button class="calc-btn" onclick="cInput('5')">5</button>
-                <button class="calc-btn" onclick="cInput('6')">6</button>
-                <button class="calc-btn bg-orange-100 text-orange-600 font-black text-2xl" onclick="cOp('-')">-</button>
-                <button class="calc-btn" onclick="cInput('1')">1</button>
-                <button class="calc-btn" onclick="cInput('2')">2</button>
-                <button class="calc-btn" onclick="cInput('3')">3</button>
-                <button class="calc-btn bg-blue-600 text-white row-span-2 text-2xl" onclick="cOk()">＝</button>
-                <button class="calc-btn col-span-2" onclick="cInput('0')">0</button>
-                <button class="calc-btn bg-red-500 text-white font-black" onclick="cClear()">C</button>
+                <button class="calc-btn" onclick="cInput('7')">7</button><button class="calc-btn" onclick="cInput('8')">8</button><button class="calc-btn" onclick="cInput('9')">9</button><button class="calc-btn bg-orange-100 text-orange-600" onclick="cOp('+')">+</button>
+                <button class="calc-btn" onclick="cInput('4')">4</button><button class="calc-btn" onclick="cInput('5')">5</button><button class="calc-btn" onclick="cInput('6')">6</button><button class="calc-btn bg-orange-100 text-orange-600 text-2xl" onclick="cOp('-')">-</button>
+                <button class="calc-btn" onclick="cInput('1')">1</button><button class="calc-btn" onclick="cInput('2')">2</button><button class="calc-btn" onclick="cInput('3')">3</button><button class="calc-btn bg-blue-600 text-white row-span-2 text-2xl" onclick="cOk()">＝</button>
+                <button class="calc-btn col-span-2" onclick="cInput('0')">0</button><button class="calc-btn bg-red-500 text-white font-black" onclick="cClear()">C</button>
             </div>
         </div>
     </div>
@@ -146,50 +128,50 @@
         const dbRef = firebase.database().ref("LTS_SYSTEM_DATA");
         
         let db = { trucks: [], vendors: [], units: [], tally: {}, loads: {}, tracks: {}, okStatus: {} };
-        const state = { tab: 'check', curV: null, curU: 'all', loadU: 'all', repMode: 'item', repV: null, repU: 'all', calc: null, activeTruck: null };
+        const state = { tab: 'check', curV: null, curU: 'all', loadU: 'all', repMode: 'item', repV: null, calc: null, activeTruck: null };
 
         const save = () => {
-            document.getElementById('sync-status').innerText = "雲端同步中...";
-            document.getElementById('sync-status').className = "bg-blue-600 text-white text-[11px] text-center py-1 font-bold";
-            dbRef.set(db).then(() => {
-                document.getElementById('sync-status').innerText = "● 雲端已同步 (實時連線)";
-                document.getElementById('sync-status').className = "bg-green-600 text-white text-[11px] text-center py-1 font-bold";
-                refreshUI();
-            });
+            dbRef.set(db).then(() => { refreshUI(); });
         };
 
         dbRef.on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData) {
                 db = cloudData;
-                if(!db.tally) db.tally = {};
-                if(!db.loads) db.loads = {};
-                if(!db.tracks) db.tracks = {};
-                if(!db.okStatus) db.okStatus = {};
-                document.getElementById('sync-status').innerText = "● 雲端已同步 (實時連線)";
+                if(!db.tally) db.tally = {}; if(!db.loads) db.loads = {}; if(!db.tracks) db.tracks = {}; if(!db.okStatus) db.okStatus = {};
+                document.getElementById('sync-status').innerText = "● 雲端即時同步中";
                 document.getElementById('sync-status').className = "bg-green-600 text-white text-[11px] text-center py-1 font-bold";
                 refreshUI();
             }
         });
 
-        // 💡 核心演算：計算最終佔用總箱數（尾數 > 0 也要算一箱）
+        // 核心運算：處理箱、尾、總用箱數
         function getFinalBox(vName, uName, pName) {
             const vendor = db.vendors.find(v => v.name === vName);
             const key = `${vName}_${uName}_${pName}`;
-            const data = db.tally[key] || { box: 0, rem: 0, offset: 0, expected: 0, hasRealTally: false };
+            const data = db.tally[key] || { box: 0, rem: 0, offset: 0, expected: 0, expectedBoxOnly: 0, expectedRem: 0 };
             
+            // 💡 串接行政給的預計文字 (包含尾數顯示)
+            let expStr = "";
+            if (data.expected > 0) {
+                if (data.expectedRem > 0) {
+                    expStr = `${data.expectedBoxOnly || 0}箱${data.expectedRem}尾`;
+                } else {
+                    expStr = `${data.expected || 0}箱`;
+                }
+            }
+
             if (vendor && vendor.mode === 'sum') {
-                return { display: `${data.box}箱`, hasReal: (data.box > 0 || data.offset !== 0), total: Math.max(0, (data.box || 0) + (data.offset || 0)), expected: data.expected || 0 };
+                return { display: `${data.box}箱`, hasReal: (data.box > 0 || data.offset !== 0), total: Math.max(0, (data.box || 0) + (data.offset || 0)), expected: data.expected || 0, expStr: data.expected ? `${data.expected}箱` : '' };
             }
             
-            // 核心邏輯：尾數只要大於 0 就必須進位多裝一箱
             const carry = (data.rem || 0) > 0 ? 1 : 0;
             const hasReal = (data.box > 0 || data.rem > 0 || data.offset !== 0);
             const total = (data.box || 0) + carry + (data.offset || 0);
-            return { display: `${data.box || 0}箱 ${data.rem || 0}尾`, hasReal: hasReal, total: Math.max(0, total), expected: data.expected || 0 };
+            return { display: `${data.box || 0}箱 ${data.rem || 0}尾`, hasReal: hasReal, total: Math.max(0, total), expected: data.expected || 0, expStr: expStr };
         }
 
-        // 現場對點 UI 渲染
+        // 1. 現場對點 UI 渲染
         function renderCheck() {
             const vGrid = document.getElementById('check-vendor-grid');
             vGrid.innerHTML = db.vendors.map(v => `
@@ -204,7 +186,7 @@
                 document.getElementById('check-workspace').classList.remove('hidden');
                 document.getElementById('check-header').innerText = `正在點收：${state.curV}`;
                 
-                document.getElementById('check-unit-tabs').innerHTML = `<button onclick="state.curU='all';refreshUI()" class="px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap ${state.curU==='all'?'bg-blue-600 text-white':'bg-white border'}">全部展開</button>` +
+                document.getElementById('check-unit-tabs').innerHTML = `<button onclick="state.curU='all';refreshUI()" class="px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap ${state.curU==='all'?'bg-blue-600 text-white':'bg-white border'}">全部目的地</button>` +
                     db.units.map(u => `<button onclick="state.curU='${u.name}';refreshUI()" class="px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap ${state.curU===u.name?'bg-blue-600 text-white':'bg-white border'}">${u.name}</button>`).join('');
                 
                 const units = state.curU === 'all' ? db.units : db.units.filter(u => u.name === state.curU);
@@ -216,43 +198,37 @@
                         </div>
                         ${vendor.mode==='detail' ? (vendor.items||[]).map(p => {
                             const key = `${vendor.name}_${u.name}_${p.name}`;
-                            const d = db.tally[key] || { box: 0, rem: 0, offset: 0, expected: 0 };
+                            const d = db.tally[key] || { box: 0, rem: 0, offset: 0 };
                             const stats = getFinalBox(vendor.name, u.name, p.name);
-                            
                             const isQtyMismatch = (stats.expected > 0) && (stats.total !== stats.expected);
-                            const itemBgStyle = isQtyMismatch ? 'bg-orange-50/80 border border-orange-200 px-2 rounded-xl' : '';
 
                             return `
-                                <div class="flex items-center gap-2 py-2 border-b last:border-0 ${itemBgStyle}">
-                                    <div class="flex-1">
-                                        <div class="font-bold text-xs text-slate-800 flex items-center flex-wrap gap-1">
-                                            <span>${p.name}</span>
-                                            ${stats.expected > 0 ? `<span class="ml-1 px-1 py-0.5 rounded text-[10px] font-bold ${isQtyMismatch ? 'bg-orange-200 text-orange-800' : 'bg-slate-100 text-slate-500'}">預計:${stats.expected}箱</span>` : ''}
-                                        </div>
+                                <div class="flex items-center gap-2 py-2 border-b last:border-0 ${isQtyMismatch ? 'bg-orange-50/80 px-1 rounded-lg' : ''}">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-bold text-xs text-slate-800 truncate">${p.name}</div>
+                                        ${stats.expStr ? `<span class="inline-block mt-0.5 text-[9px] font-black px-1 rounded bg-slate-100 text-slate-600">預計:${stats.expStr}</span>` : ''}
                                     </div>
-                                    <div class="flex gap-1 items-center">
+                                    <div class="flex gap-1 items-center shrink-0">
                                         <div onclick="openCalc('${key}','box',${d.box||0},'${u.name}-${p.name}(整箱)')" class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center font-black text-xs">${d.box||0}</div>
                                         <div onclick="openCalc('${key}','rem',${d.rem||0},'${u.name}-${p.name}(尾數)')" class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center font-bold text-blue-600 text-xs">${d.rem||0}</div>
-                                        <div class="flex flex-col gap-1 mx-1">
-                                            <button onclick="adjOff('${key}',1)" class="w-8 h-4 bg-green-50 text-green-600 rounded text-[10px] font-bold">+1</button>
-                                            <button onclick="adjOff('${key}',-1)" class="w-8 h-4 bg-red-50 text-red-600 rounded text-[10px] font-bold">-1</button>
+                                        <div class="flex flex-col gap-0.5 mx-0.5">
+                                            <button onclick="adjOff('${key}',1)" class="w-7 h-4 bg-green-50 text-green-600 rounded text-[9px] font-bold">+1</button>
+                                            <button onclick="adjOff('${key}',-1)" class="w-7 h-4 bg-red-50 text-red-600 rounded text-[9px] font-bold">-1</button>
                                         </div>
-                                        <div class="w-10 text-center">
-                                            <div class="text-[11px] font-black ${isQtyMismatch ? 'text-orange-600 text-xs' : 'text-blue-700'}">${stats.total}</div>
+                                        <div class="w-8 text-center">
+                                            <div class="text-xs font-black ${isQtyMismatch ? 'text-orange-600' : 'text-blue-700'}">${stats.total}</div>
                                             <div class="text-[8px] text-slate-300">總箱</div>
                                         </div>
                                     </div>
                                 </div>`;
                         }).join('') : (() => {
                             const key = `${vendor.name}_${u.name}_SUM`;
-                            const d = db.tally[key] || { box: 0, rem: 0, offset: 0, expected: 0 };
+                            const d = db.tally[key] || { box: 0 };
                             const stats = getFinalBox(vendor.name, u.name, 'SUM');
-                            const isQtyMismatch = (stats.expected > 0) && (stats.total !== stats.expected);
-                            
                             return `
-                            <div class="flex justify-between items-center p-2 rounded-xl ${isQtyMismatch ? 'bg-orange-50 border border-orange-200' : ''}">
-                                <span class="text-xs font-bold text-slate-700">總箱數點收 ${stats.expected > 0 ? `<span class="text-orange-600">(預計:${stats.expected})</span>`:''}</span>
-                                <div onclick="openCalc('${key}','box',${d.box||0},'${u.name} 總箱數')" class="w-20 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-lg">${d.box||0}</div>
+                            <div class="flex justify-between items-center p-1">
+                                <span class="text-xs font-bold text-slate-600">總箱數點收 ${stats.expected > 0 ? `<span class="text-orange-600 text-[10px]">(預計:${stats.expected}箱)</span>`:''}</span>
+                                <div onclick="openCalc('${key}','box',${d.box||0},'${u.name} 總箱')" class="w-16 h-9 bg-slate-100 rounded-lg flex items-center justify-center font-black text-sm">${d.box||0}</div>
                             </div>`;
                         })()}
                     </div>
@@ -260,7 +236,100 @@
             }
         }
 
-        // 💡 智能動態遞延報表核心邏輯
+        // 2. 精細配載模組核心代碼 (完整復原)
+        function renderLoading() {
+            const tabs = document.getElementById('loading-unit-tabs');
+            tabs.innerHTML = `<button onclick="state.loadU='all';refreshUI()" class="px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap ${state.loadU==='all'?'bg-blue-600 text-white':'bg-white border'}">全部車次</button>` +
+                db.trucks.map(t => `<button onclick="state.loadU='${t.name}';refreshUI()" class="px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap ${state.loadU===t.name?'bg-blue-600 text-white':'bg-white border'}">${t.name}</button>`).join('');
+
+            const targetTrucks = state.loadU === 'all' ? db.trucks : db.trucks.filter(t => t.name === state.loadU);
+            const grid = document.getElementById('truck-grid');
+            
+            grid.innerHTML = targetTrucks.map(t => {
+                let loadedCount = 0;
+                (t.targets || []).forEach(un => {
+                    db.vendors.forEach(v => {
+                        const items = v.mode === 'detail' ? (v.items || []) : [{ name: 'SUM' }];
+                        items.forEach(p => {
+                            const key = `${v.name}_${un}_${p.name}`;
+                            loadedCount += (db.loads[`${t.name}_${key}`] || 0);
+                        });
+                    });
+                });
+                const pct = Math.min(100, Math.round((loadedCount / (t.max || 150)) * 100));
+                
+                return `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-black text-sm text-slate-800">${t.name}</h3>
+                            <span class="text-xs font-bold text-blue-600">${loadedCount} / ${t.max || 150} 箱</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-3">
+                            <div class="bg-blue-600 h-full" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="text-[10px] text-slate-400 font-medium truncate mb-3">負責單位: ${(t.targets || []).join(', ') || '未設定'}</div>
+                        <button onclick="openLoad('${t.name}')" class="w-full py-2 bg-slate-50 hover:bg-slate-100 text-blue-600 font-black text-xs rounded-lg border border-slate-200">
+                            🚚 執行配載車載裝箱
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openLoad(tName) {
+            state.activeTruck = tName;
+            document.getElementById('load-title').innerText = `${tName} 配載清單`;
+            const truck = db.trucks.find(t => t.name === tName);
+            const listContainer = document.getElementById('load-list');
+            
+            let html = "";
+            (truck.targets || []).forEach(un => {
+                html += `<div class="bg-slate-50 p-3 rounded-xl border"><h4 class="font-black text-xs text-slate-700 mb-2 border-b pb-1">📍 目的地：${un}</h4>`;
+                db.vendors.forEach(v => {
+                    const items = v.mode === 'detail' ? (v.items || []) : [{ name: 'SUM' }];
+                    items.forEach(p => {
+                        const key = `${v.name}_${un}_${p.name}`;
+                        const stats = getFinalBox(v.name, un, p.name);
+                        if (stats.total > 0) {
+                            let alreadyLoaded = 0;
+                            db.trucks.forEach(tk => { alreadyLoaded += (db.loads[`${tk.name}_${key}`] || 0); });
+                            let currentTruckLoad = db.loads[`${tName}_${key}`] || 0;
+                            let maxAvailable = stats.total - (alreadyLoaded - currentTruckLoad);
+
+                            html += `
+                                <div class="flex justify-between items-center bg-white p-2 rounded-lg mb-1.5 shadow-sm text-xs">
+                                    <div class="min-w-0 flex-1 pr-2">
+                                        <div class="font-bold text-slate-800 truncate">[${v.name}] ${p.name}</h4>
+                                        <div class="text-[9px] text-slate-400">現場對點實到共 ${stats.total} 箱</div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="text-[10px] text-slate-400">已指派</span>
+                                        <input type="number" min="0" max="${maxAvailable}" 
+                                            class="w-14 border border-slate-300 font-black rounded text-center py-1 bg-slate-50"
+                                            value="${currentTruckLoad}" 
+                                            onchange="updateLoadValue('${tName}','${key}',this,${maxAvailable})">
+                                        <span class="text-[10px] font-bold text-slate-500">/ ${maxAvailable}箱</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                });
+                html += `</div>`;
+            });
+            listContainer.innerHTML = html || `<div class="text-center py-8 text-slate-400 text-xs">該車次負責的單位目前無任何到貨對點箱數。</div>`;
+            document.getElementById('load-selector').classList.remove('hidden');
+        }
+
+        function updateLoadValue(tName, key, input, max) {
+            let val = parseInt(input.value) || 0;
+            if (val > max) { alert(`超過可配載上限！上限為 ${max} 箱`); val = max; input.value = max; }
+            if (val < 0) val = 0;
+            db.loads[`${tName}_${key}`] = val;
+        }
+        function closeLoad() { document.getElementById('load-selector').classList.add('hidden'); save(); }
+
+        // 3. 智能動態遞延報表
         function renderReport() {
             const vGrid = document.getElementById('rep-vendor-grid');
             vGrid.innerHTML = db.vendors.map(v => `
@@ -268,91 +337,130 @@
                     ${v.name}
                 </button>
             `).join('');
-
             const content = document.getElementById('report-content');
-            if (!state.repV) { content.innerHTML = "<div class='text-center py-12 text-slate-300'>請先點選上方廠商</div>"; return; }
+            if (!state.repV) { content.innerHTML = "<div class='text-center py-12 text-slate-300 text-xs'>請點選上方廠商</div>"; return; }
 
             if (state.repMode === 'item') {
-                // 明細與覆點畫面 (略過以精簡版面，與之前一致)
-                content.innerHTML = "<div class='text-center py-4 text-slate-400 text-xs'>切換至下方「智能預排遞延單」可看預估與實到修正</div>";
+                content.innerHTML = "<div class='text-center py-4 text-slate-400 text-xs'>請切換至「智能預排遞延單」檢視完整箱數修正數據</div>";
             } else {
-                // 💡 智能遞延：未點貨前先抓行政「預計箱數」，點貨後自動即時被現場「實點箱數」覆蓋修正！
-                const getZoneTotal = (zoneType) => {
-                    return db.units.filter(u => u.type === zoneType).reduce((sum, u) => {
-                        return sum + calcUnitDynamicBoxes(state.repV, u.name);
-                    }, 0);
-                };
-
-                content.innerHTML = `
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-t-8 border-blue-600">
-                        <div class="flex justify-between items-center">
-                            <span class="text-[10px] text-slate-400 font-bold">遞延單 A (北區/中區)</span>
-                            <span class="text-[9px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">行政預排＋現場自動修正</span>
+                const getZoneTotal = (zt) => db.units.filter(u => u.type === zt).reduce((sum, u) => sum + calcUnitDynamicBoxes(state.repV, u.name), 0);
+                content.innerHTML = ['A', 'B'].map(zt => {
+                    const isA = zt === 'A';
+                    return `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 ${isA?'border-blue-600':'border-orange-500'}">
+                        <div class="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                            <span>遞延單 ${zt} (${isA?'北/中區':'南區'})</span>
+                            <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">實時智能聯動</span>
                         </div>
-                        <div class="text-4xl font-black text-blue-600 my-2">${getZoneTotal('A')} <span class="text-sm">箱</span></div>
-                        <div class="grid grid-cols-2 gap-2 mt-4">
-                            ${db.units.filter(u => u.type === 'A').map(u => {
+                        <div class="text-3xl font-black ${isA?'text-blue-600':'text-orange-500'} my-2">${getZoneTotal(zt)} <span class="text-xs">箱</span></div>
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            ${db.units.filter(u => u.type === zt).map(u => {
                                 const isReal = checkHasRealTally(state.repV, u.name);
-                                return `<div class="p-2 border rounded text-[10px] font-bold ${isReal?'bg-green-50/50 border-green-200':'bg-slate-50 border-dashed'}">${u.name}: <span class="text-blue-600">${calcUnitDynamicBoxes(state.repV, u.name)} 箱</span> ${isReal?'<span class="text-[8px] text-green-600 block">(現場實到修正)</span>':'<span class="text-[8px] text-slate-400 block">(行政預估值)</span>'}</div>`
-                            }).join('')}
-                        </div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-t-8 border-orange-500">
-                        <div class="flex justify-between items-center">
-                            <span class="text-[10px] text-slate-400 font-bold">遞延單 B (南區)</span>
-                            <span class="text-[9px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded font-bold">行政預排＋現場自動修正</span>
-                        </div>
-                        <div class="text-4xl font-black text-orange-500 my-2">${getZoneTotal('B')} <span class="text-sm">箱</span></div>
-                        <div class="grid grid-cols-2 gap-2 mt-4">
-                            ${db.units.filter(u => u.type === 'B').map(u => {
-                                const isReal = checkHasRealTally(state.repV, u.name);
-                                return `<div class="p-2 border rounded text-[10px] font-bold ${isReal?'bg-green-50/50 border-green-200':'bg-slate-50 border-dashed'}">${u.name}: <span class="text-orange-500">${calcUnitDynamicBoxes(state.repV, u.name)} 箱</span> ${isReal?'<span class="text-[8px] text-green-600 block">(現場實到修正)</span>':'<span class="text-[8px] text-slate-400 block">(行政預估值)</span>'}</div>`
+                                return `<div class="p-2 border rounded text-[10px] font-bold ${isReal?'bg-green-50/50 border-green-200':'bg-slate-50 border-dashed'}">${u.name}: <span class="text-blue-600">${calcUnitDynamicBoxes(state.repV, u.name)} 箱</span><span class="text-[8px] text-slate-400 block">${isReal?'(現場點收值)':'(行政預估值)'}</span></div>`
                             }).join('')}
                         </div>
                     </div>`;
+                }).join('');
             }
         }
+        function checkHasRealTally(vName, uName) { const v = db.vendors.find(x => x.name === vName); if (!v) return false; return (v.mode === 'detail' ? (v.items || []) : [{ name: 'SUM' }]).some(p => getFinalBox(vName, uName, p.name).hasReal); }
+        function calcUnitDynamicBoxes(vName, uName) { const v = db.vendors.find(x => x.name === vName); if (!v) return 0; let total = 0; (v.mode === 'detail' ? (v.items || []) : [{ name: 'SUM' }]).forEach(p => { const stats = getFinalBox(vName, uName, p.name); total += stats.hasReal ? stats.total : stats.expected; }); return total; }
 
-        // 檢查現場是否有開始對點
-        function checkHasRealTally(vName, uName) {
-            const v = db.vendors.find(x => x.name === vName); if (!v) return false;
-            const items = v.mode === 'detail' ? (v.items || []) : [{ name: 'SUM' }];
-            return items.some(p => getFinalBox(vName, uName, p.name).hasReal);
+        // 4. 維護管理後台核心代碼 (完整復原)
+        function renderManage() {
+            document.getElementById('m-trucks').innerHTML = (db.trucks || []).map((t, ti) => `
+                <div class="bg-slate-50 p-3 rounded-xl border text-xs">
+                    <div class="flex justify-between items-center mb-2">
+                        <input type="text" class="font-black bg-transparent border-b border-slate-300 w-24 focus:bg-white" value="${t.name}" onchange="dbEdit('trucks',${ti},'name',this.value)">
+                        <button onclick="dbDel('trucks',${ti})" class="text-red-500 font-bold">刪除</button>
+                    </div>
+                    <div class="flex items-center gap-1 mb-2">
+                        <span class="text-[10px] text-slate-400">箱數上限:</span>
+                        <input type="number" class="w-16 border rounded text-center bg-white font-bold" value="${t.max||150}" onchange="dbEdit('trucks',${ti},'max',parseInt(this.value)||150)">
+                    </div>
+                    <div class="text-[10px] text-slate-400 font-bold mb-1">負責指定單位:</div>
+                    <div class="flex flex-wrap gap-1">
+                        ${db.units.map(u => {
+                            const isTgt = (t.targets || []).includes(u.name);
+                            return `<button onclick="tglTgt(${ti},'${u.name}')" class="px-2 py-0.5 rounded text-[10px] border font-medium ${isTgt?'bg-blue-600 text-white border-blue-600':'bg-white text-slate-600'}">${u.name}</button>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('m-vendors').innerHTML = (db.vendors || []).map((v, vi) => `
+                <div class="bg-slate-50 p-3 rounded-xl border text-xs space-y-2">
+                    <div class="flex justify-between items-center">
+                        <input type="text" class="font-black bg-transparent border-b border-slate-300 w-32 focus:bg-white" value="${v.name}" onchange="dbEdit('vendors',${vi},'name',this.value)">
+                        <div class="flex gap-2">
+                            <select onchange="dbEdit('vendors',${vi},'mode',this.value)" class="text-[10px] border rounded p-0.5 font-bold">
+                                <option value="detail" ${v.mode==='detail'?'selected':''}>明細模式</option>
+                                <option value="sum" ${v.mode==='sum'?'selected':''}>僅總箱</option>
+                            </select>
+                            <button onclick="dbDel('vendors',${vi})" class="text-red-500 font-bold">刪除</button>
+                        </div>
+                    </div>
+                    ${v.mode === 'detail' ? `
+                        <div class="bg-white p-2 rounded-lg border space-y-1">
+                            <div class="text-[10px] text-slate-400 font-bold mb-1 flex justify-between"><span>商品清單與箱入數</span><button onclick="subA(${vi})" class="text-blue-600">+ 新增品項</button></div>
+                            ${(v.items || []).map((p, pi) => `
+                                <div class="flex gap-1 items-center mb-1">
+                                    <input type="text" class="border rounded px-1 py-0.5 flex-1 font-medium text-[11px]" value="${p.name}" onchange="subE(${vi},${pi},'name',this.value)">
+                                    <input type="number" class="border rounded px-1 py-0.5 w-12 text-center font-bold text-[11px]" value="${p.pcs}" onchange="subE(${vi},${pi},'pcs',parseInt(this.value)||10)">
+                                    <span class="text-[10px] text-slate-300">入</span>
+                                    <button onclick="subD(${vi},${pi})" class="text-slate-300 hover:text-red-500 px-1">✕</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `:''}
+                </div>
+            `).join('');
+
+            document.getElementById('m-units').innerHTML = (db.units || []).map((u, ui) => `
+                <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border text-xs">
+                    <input type="text" class="font-bold bg-transparent border-b w-20" value="${u.name}" onchange="dbEdit('units',${ui},'name',this.value)">
+                    <div class="flex gap-2 items-center">
+                        <select onchange="dbEdit('units',${ui},'zone',this.value)" class="border rounded p-0.5 text-[10px] font-bold">
+                            <option value="北" ${u.zone==='北'?'selected':''}>北區</option><option value="中" ${u.zone==='中'?'selected':''}>中區</option><option value="南" ${u.zone==='南'?'selected':''}>南區</option>
+                        </select>
+                        <select onchange="dbEdit('units',${ui},'type',this.value)" class="border rounded p-0.5 text-[10px] font-bold">
+                            <option value="A" ${u.type==='A'?'selected':''}>遞延A</option><option value="B" ${u.type==='B'?'selected':''}>遞延B</option>
+                        </select>
+                        <button onclick="dbDel('units',${ui})" class="text-red-400 px-1">✕</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // 動態判定：有實到用實到，沒實到用行政預計
-        function calcUnitDynamicBoxes(vName, uName) {
-            const v = db.vendors.find(x => x.name === vName); if (!v) return 0;
-            const items = v.mode === 'detail' ? (v.items || []) : [{ name: 'SUM' }];
-            
-            let total = 0;
-            items.forEach(p => {
-                const stats = getFinalBox(vName, uName, p.name);
-                if (stats.hasReal) {
-                    total += stats.total; // 現場已經開始點了，用現場修正數量
-                } else {
-                    total += stats.expected; // 現場還沒點貨，預先撈取行政輸入的預計量
-                }
-            });
-            return total;
-        }
+        function dbAdd(k) { if(k==='trucks') db.trucks.push({name:'新車次',max:150,targets:[]}); if(k==='vendors') db.vendors.push({name:'新廠商',mode:'detail',items:[]}); if(k==='units') db.units.push({name:'新單位',zone:'北',type:'A'}); save(); }
+        function dbEdit(k,i,f,v) { db[k][i][f]=v; save(); }
+        function dbDel(k,i) { if(confirm("確定刪除嗎？")) { db[k].splice(i,1); save(); } }
+        function subA(vi) { if(!db.vendors[vi].items) db.vendors[vi].items=[]; db.vendors[vi].items.push({name:'新商品',pcs:10}); save(); }
+        function subE(vi,pi,k,v) { db.vendors[vi].items[pi][k]=v; save(); }
+        function subD(vi,pi) { if(confirm("確定刪除此品項？")) { db.vendors[vi].items.splice(pi,1); save(); } }
+        function tglTgt(ti,un) { if(!db.trucks[ti].targets) db.trucks[ti].targets=[]; const idx=db.trucks[ti].targets.indexOf(un); if(idx>-1)db.trucks[ti].targets.splice(idx,1); else db.trucks[ti].targets.push(un); save(); }
 
-        // 下方為計算機核心操作與導覽，維持高流暢手感不變
+        // 計算機核心操作
         function openCalc(k, t, v, l) { state.calc = { k, t, isNew: true, oldVal: v, runningTotal: 0, activeOp: null, hasClearedOnce: false }; document.getElementById('calc-label').innerText = l; document.getElementById('calc-disp').innerText = "0"; document.getElementById('calc-hist').innerText = ""; document.getElementById('calc-pop').classList.replace('hidden', 'flex'); }
-        function cInput(n) { const d = document.getElementById('calc-disp'); state.calc.hasClearedOnce = false; if(state.calc.isNew){ d.innerText = n; state.calc.isNew = false; } else { d.innerText = d.innerText === '0' ? n : d.innerText + n; } }
+        function cInput(n) { const d = document.getElementById('calc-disp'); if(state.calc.isNew){ d.innerText = n; state.calc.isNew = false; } else { d.innerText = d.innerText === '0' ? n : d.innerText + n; } }
         function cOp(op) { const d = document.getElementById('calc-disp'); const h = document.getElementById('calc-hist'); let cv = parseFloat(d.innerText) || 0; if (state.calc.activeOp === '+') state.calc.runningTotal += cv; else if (state.calc.activeOp === '-') state.calc.runningTotal -= cv; else state.calc.runningTotal = cv; state.calc.activeOp = op; state.calc.isNew = true; h.innerText = state.calc.runningTotal + " " + op; d.innerText = state.calc.runningTotal; }
-        function cClear() { const d = document.getElementById('calc-disp'); if (d.innerText === '0' || state.calc.hasClearedOnce) { showCustomConfirm({ title: "归零确认", msg: "确定清空数据？", onConfirm: () => { if(!db.tally[state.calc.k]) db.tally[state.calc.k]={box:0,rem:0,offset:0}; db.tally[state.calc.k][state.calc.t]=0; save(); closeCalc(); } }); return; } d.innerText = '0'; state.calc.hasClearedOnce = true; }
-        function cOk() { const d = document.getElementById('calc-disp'); let iv = parseFloat(d.innerText) || 0; let res = state.calc.activeOp === '+' ? state.calc.runningTotal + iv : state.calc.activeOp === '-' ? state.calc.runningTotal - iv : (state.calc.oldVal > 0 ? iv + state.calc.oldVal : iv); if(!db.tally[state.calc.k]) db.tally[state.calc.k]={box:0,rem:0,offset:0}; db.tally[state.calc.k][state.calc.t]=Math.max(0, res); save(); closeCalc(); }
+        function cClear() { const d = document.getElementById('calc-disp'); if (d.innerText === '0' || state.calc.hasClearedOnce) { if(!db.tally[state.calc.k]) db.tally[state.calc.k]={box:0,rem:0,offset:0}; db.tally[state.calc.k][state.calc.t]=0; save(); closeCalc(); return; } d.innerText = '0'; state.calc.hasClearedOnce = true; }
+        function cOk() { const d = document.getElementById('calc-disp'); let iv = parseFloat(d.innerText) || 0; let res = state.calc.activeOp === '+' ? state.calc.runningTotal + iv : state.calc.activeOp === '-' ? state.calc.runningTotal - iv : iv; if(!db.tally[state.calc.k]) db.tally[state.calc.k]={box:0,rem:0,offset:0}; db.tally[state.calc.k][state.calc.t]=Math.max(0, res); save(); closeCalc(); }
         function closeCalc() { document.getElementById('calc-pop').classList.replace('flex', 'hidden'); }
-        function switchTab(t) { state.tab = t; document.querySelectorAll('section').forEach(s => s.classList.add('hidden-tab')); document.getElementById('tab-' + t).classList.remove('hidden-tab'); document.querySelectorAll('nav button').forEach(b => b.className="flex-1 h-full text-sm font-bold text-slate-400"); document.getElementById('nav-'+t).className="flex-1 h-full nav-active"; refreshUI(); }
-        function toggleRepMode(m) { state.repMode = m; toggleRepModeUI(m); renderReport(); }
-        function toggleRepModeUI(m) { const a=document.getElementById('btn-rep-item'), b=document.getElementById('btn-rep-defer'); if(m==='item'){ a.className="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow text-blue-600"; b.className="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500"; }else{ b.className="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow text-orange-600"; a.className="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500"; } }
-        function refreshUI() { if(state.tab==='check')renderCheck(); if(state.tab==='report')renderReport(); }
+
+        function switchTab(t) { state.tab = t; document.querySelectorAll('section').forEach(s => s.classList.add('hidden-tab')); document.getElementById('tab-' + t).classList.remove('hidden-tab'); document.querySelectorAll('nav button').forEach(b => b.className="flex-1 h-full text-xs font-bold text-slate-400"); document.getElementById('nav-'+t).className="flex-1 h-full nav-active"; refreshUI(); }
+        function toggleRepMode(m) { state.repMode = m; const a=document.getElementById('btn-rep-item'), b=document.getElementById('btn-rep-defer'); if(m==='item'){ a.className="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow text-blue-600"; b.className="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500"; }else{ b.className="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow text-orange-600"; a.className="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500"; } renderReport(); }
         function selVendor(n) { state.curV=n; refreshUI(); }
         function adjOff(k,v) { if(!db.tally[k])db.tally[k]={box:0,rem:0,offset:0}; db.tally[k].offset = (db.tally[k].offset||0)+v; save(); }
-        function askDailyReset() { showCustomConfirm({ title: "⚠️ 日結清空", msg: "確定清除今日所有對點數據嗎？", onConfirm: () => { db.tally={}; db.loads={}; db.tracks={}; db.okStatus={}; save(); } }); }
-        function showCustomConfirm({ title, msg, onConfirm }) { const m=document.getElementById('custom-confirm-modal'), b=document.getElementById('confirm-box'); document.getElementById('confirm-title').innerText=title; document.getElementById('confirm-msg').innerText=msg; m.classList.replace('hidden','flex'); setTimeout(()=>{ b.classList.remove('scale-95','opacity-0'); },10); document.getElementById('confirm-btn-action').onclick=()=>{ onConfirm(); m.classList.replace('flex','hidden'); }; document.getElementById('confirm-btn-cancel').onclick=()=>{ m.classList.replace('flex','hidden'); }; }
+        function askDailyReset() { if(confirm("⚠️ 確定全面日結清空今日所有對點、配載數據嗎？")) { db.tally={}; db.loads={}; db.tracks={}; db.okStatus={}; save(); } }
         
+        function refreshUI() { 
+            if(state.tab==='check') renderCheck(); 
+            if(state.tab==='loading') renderLoading(); 
+            if(state.tab==='report') renderReport(); 
+            if(state.tab==='manage') renderManage(); 
+        }
+
         switchTab('check');
     </script>
 </body>
