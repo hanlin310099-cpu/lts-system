@@ -476,6 +476,7 @@
             renderReport();
         }
 
+        // 💡 核心優化點：重構報表格結構，使其完全遵循 vendor.items 的原始商品排序
         function renderReport() {
             const vGrid = document.getElementById('rep-vendor-grid');
             vGrid.innerHTML = db.vendors.map(v => `
@@ -497,12 +498,17 @@
             if (state.repMode === 'item') {
                 let html = `<div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-blue-600"><h3 class="font-black text-[11px] text-blue-600 mb-3">📋 ${state.repV} 明細覆點</h3>`;
                 const filteredUnits = state.repU === 'all' ? db.units : db.units.filter(u => u.name === state.repU);
+                
                 filteredUnits.forEach(u => {
-                    Object.keys(db.tally).forEach(key => {
-                        if (key.startsWith(`${vendor.name}_${u.name}_`)) {
-                            const pName = key.split('_')[2] || 'SUM';
+                    // 根據廠商經營模式決定要產出的品項陣列與排序（與對點畫面邏輯精準同步）
+                    const targetProductList = vendor.mode === 'detail' ? (vendor.items || []) : [{ name: 'SUM' }];
+                    
+                    targetProductList.forEach(p => {
+                        const key = `${vendor.name}_${u.name}_${p.name}`;
+                        // 檢查此欄位在對點數據中是否存在，若存在才進行報表表格輸出
+                        if (db.tally && db.tally[key]) {
                             if (!db.tracks[key]) db.tracks[key] = [0,0,0,0];
-                            const t = db.tracks[key]; const stats = getFinalBox(vendor.name, u.name, pName);
+                            const t = db.tracks[key]; const stats = getFinalBox(vendor.name, u.name, p.name);
                             const isOk = db.okStatus && db.okStatus[key] === true;
                             const rowBgColor = isOk ? 'bg-green-50 border border-green-200' : 'bg-white';
                             const displayDebt = t[0] !== 0 ? Math.abs(t[0]) : '';
@@ -517,7 +523,7 @@
                                         <div class="flex flex-col gap-1 truncate">
                                             <div class="flex gap-1.5 items-center">
                                                 <span class="font-bold text-[11px] bg-slate-200 px-1.5 py-0.5 rounded">${u.name}</span>
-                                                <span class="font-bold text-[11px] text-slate-700 truncate">${pName==='SUM'?'總箱數':pName}</span>
+                                                <span class="font-bold text-[11px] text-slate-700 truncate">${p.name==='SUM'?'總箱數':p.name}</span>
                                             </div>
                                             <div class="text-[10px] text-slate-400 mt-0.5 flex items-center">原始點收: ${stats.rawBox}箱 ${stats.rawRem}尾 ${offsetBadgeHtml}</div>
                                         </div>
@@ -559,7 +565,6 @@
 
         function toggleItemOk(key) { if (!db.okStatus) db.okStatus = {}; db.okStatus[key] = !db.okStatus[key]; save(); }
 
-        // 💡 需求 1：在維護管理中，為各層級元件乾淨地加入上下移動按鈕功能
         function renderManage() {
             document.getElementById('m-trucks').innerHTML = (db.trucks||[]).map((t, i) => `
                 <div class="p-3 bg-slate-50 rounded-xl border border-blue-100 space-y-2">
@@ -692,7 +697,6 @@
         function dbAdd(t) { const o = { trucks:{name:'新車次',limit:500,targets:[]}, vendors:{name:'新廠商',mode:'detail',items:[]}, units:{name:'新單位',zone:'北',type:'A'} }; db[t].push(o[t]); save(); }
         function dbE(t,i,k,v) { db[t][i][k]=v; save(); }
         
-        // 💡 需求 1 的延伸輔助函數：執行主項目上下移動
         function moveItem(type, index, direction) {
             if (direction === 'up' && index > 0) {
                 let temp = db[type][index];
@@ -707,7 +711,6 @@
             }
         }
 
-        // 💡 需求 1 的延伸輔助函數：執行廠商內部品項上下移動
         function moveSubItem(vi, pi, direction) {
             let items = db.vendors[vi].items || [];
             if (direction === 'up' && pi > 0) {
